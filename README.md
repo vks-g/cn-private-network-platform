@@ -51,3 +51,11 @@ The full topology, request flow, protocol layer map and cloud equivalents are in
 └── evidence/phase1/ screenshots, terminal output and packet captures, by form section
 ```
 
+
+## Guides
+
+Each guide covers the concept, the commands, the expected output, the screenshots to take and viva practice questions.
+
+1. [UTM lab setup – private LAN (Task A)](docs/01-utm-lab-setup.md)
+
+More guides are added as each task is built.

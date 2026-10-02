@@ -1,0 +1,19 @@
+# /etc/netplan/60-static.yaml on vm1-dns (VM1 – Mac 1 role: private DNS + test client)
+# Install:  sudo install -m 600 ~/cn/configs/vm1-dns/netplan/60-static.yaml /etc/netplan/
+# Apply from the UTM console, not over SSH:  sudo netplan try
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp0s1:                     # check the name with: ip -br link
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - 192.168.64.11/24      # fixed address; /24 = mask 255.255.255.0
+      routes:
+        - to: default           # anything outside 192.168.64.0/24 ...
+          via: 192.168.64.1     # ... goes to the Mac (UTM gateway + NAT)
+      nameservers:
+        # Task A: the Mac's DNS forwarder, so apt works.
+        # Task B switches this to our own DNS server, 192.168.64.11.
+        addresses: [192.168.64.1]

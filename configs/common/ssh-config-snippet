@@ -1,0 +1,17 @@
+# Append to ~/.ssh/config on the Mac. Afterwards "ssh vm1" ... "ssh vm4" just work.
+# Key for the lab (no passphrase needed):  ssh-keygen -t ed25519 -f ~/.ssh/cn_lab -C cn-lab
+# Copy it to each VM once:                 ssh-copy-id -i ~/.ssh/cn_lab.pub vm1   (repeat for vm2..vm4)
+
+Host vm1
+    HostName 192.168.64.11
+Host vm2
+    HostName 192.168.64.12
+Host vm3
+    HostName 192.168.64.13
+Host vm4
+    HostName 192.168.64.14
+
+Host vm1 vm2 vm3 vm4
+    User vks
+    IdentityFile ~/.ssh/cn_lab
+    IdentitiesOnly yes

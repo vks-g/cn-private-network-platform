@@ -1,0 +1,17 @@
+# Template for /etc/netplan/60-static.yaml. Copy it, then replace <OCTET>:
+#   vm1-dns 11 · vm2-edge 12 · vm3-backend-a 13 · vm4-backend-b 14
+# Ready-made copies live in configs/<vm>/netplan/60-static.yaml.
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp0s1:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - 192.168.64.<OCTET>/24
+      routes:
+        - to: default
+          via: 192.168.64.1
+      nameservers:
+        addresses: [192.168.64.1]
