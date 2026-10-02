@@ -37,6 +37,8 @@ Submission type: **Type 3 – Virtual machines (UTM on Apple Silicon)**
 | VM4 | Mac 4: Backend B + test client | `vm4-backend-b` | 192.168.64.14 | Python REST, 3002/TCP |
 | Host | UTM host, Wireshark, browser client | macOS | 192.168.64.1 | gateway of the UTM shared network |
 
+The full topology, request flow, protocol layer map and cloud equivalents are in [docs/architecture.md](docs/architecture.md).
+
 ## Repository layout
 
 ```text
