@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+
+# TLS secrets: only public certificates belong in git
+tls/private/
+*.key
+*.csr
+*.srl
+*.p12
+*.pfx
+
+# TLS session key logs (they can decrypt a capture)
+*keylog*
+sslkeys*.log
+
+# Raw screenshots before they are renamed and sorted
+evidence/**/_inbox/
+
+# Screen recordings go to Google Drive, not GitHub
+*.mov
+*.mp4
+
+# Editors and logs
+.vscode/
+.idea/
+*.log
