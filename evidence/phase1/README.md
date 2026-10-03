@@ -54,4 +54,18 @@ Folder: [`B-https-lb/`](B-https-lb/). Code: [backend/server.py](../../backend/se
 | Service details + request log | [C-vm3-backend-a-service.txt](B-https-lb/C-vm3-backend-a-service.txt) · [C-vm4-backend-b-service.txt](B-https-lb/C-vm4-backend-b-service.txt) | `systemctl status`, listening socket, journal line for the edge's request |
 | Starts at boot | [C-reboot-survives.png](B-https-lb/C-reboot-survives.png) | after `sudo reboot` of vm3: up 2 min, service active since the new boot, vm2's curl answered without manual start |
 
-Evidence for the remaining form sections is added as each task is built: B1–B3 (HTTPS, reverse proxy, load balancing), C (Wireshark) and D (caching, failure demo).
+## B – Edge reverse proxy and load balancing (Task D, HTTP)
+
+Folder: [`B-https-lb/`](B-https-lb/). Config: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf) on vm2-edge (`192.168.64.12:80`). This is the plain-HTTP stage; the HTTPS versions for form B1–B3 follow in Task E.
+
+| Brief item | File | What it shows |
+| --- | --- | --- |
+| nginx installed, config valid | [D-nginx-install-and-config-test.png](B-https-lb/D-nginx-install-and-config-test.png) | nginx 1.24 active on `0.0.0.0:80` (1 master + 2 workers); `nginx -t` successful; the `upstream` and `server` blocks |
+| Requests by name go through the edge | [D-first-request-lb-6x-access-log.png](B-https-lb/D-first-request-lb-6x-access-log.png) | `curl -i http://app.teamvks.test/api/status`: `Server: nginx`, `Connection: keep-alive` (hop-by-hop, added by the edge), `X-Backend` passed through |
+| Repeated requests alternate | same screenshot | 6× JSON and 6× `X-Backend`: B, A, B, A, B, A |
+| Round-robin inside the edge | same screenshot | access log: `upstream=` alternates `192.168.64.14:3002` / `192.168.64.13:3001`, a new client ephemeral port per request |
+| Client identity behind a proxy | [D-xff-backend-view.png](B-https-lb/D-xff-backend-view.png) | backend log and page: TCP peer = edge `192.168.64.12`, `X-Forwarded-For` = client `192.168.64.14` |
+| Mac and browser as clients | [D-mac-curl.png](B-https-lb/D-mac-curl.png) · [D-safari-http-backend-a.png](B-https-lb/D-safari-http-backend-a.png) · [D-safari-http-backend-b.png](B-https-lb/D-safari-http-backend-b.png) | Safari on `http://app.teamvks.test/` alternates A/B on reload; X-Forwarded-For `192.168.64.1` (the Mac) |
+| One backend down (preview of D3) | [D-one-backend-down-and-restore.png](B-https-lb/D-one-backend-down-and-restore.png) | A stopped → 6× `200` from B; log line `upstream=192.168.64.13:3001, 192.168.64.14:3002 upstream_status=502, 200` (refused, retried on B in the same request); after restart A rejoins once `fail_timeout` (10 s) expires |
+
+Evidence for the remaining form sections is added as each task is built: B1–B3 (HTTPS), C (Wireshark) and D (caching, failure demo).
