@@ -41,4 +41,17 @@ Folder: [`A-lan-dns/`](A-lan-dns/). Server: dnsmasq on vm1-dns (`192.168.64.11`)
 | Third client: the Mac | [A3-mac-resolver.png](A-lan-dns/A3-mac-resolver.png) | `/etc/resolver/teamvks.test` sends only `*.teamvks.test` to `192.168.64.11`; the system resolver returns `192.168.64.12`; `ping app.teamvks.test` works by name |
 | A4 public DNS | [A4-dig-8.8.8.8-nxdomain.txt](A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt) | `status: NXDOMAIN` from 8.8.8.8, root-zone SOA in AUTHORITY, `ad` (DNSSEC-validated non-existence) |
 
-Evidence for the remaining form sections is added as each task is built: B (HTTPS, reverse proxy, load balancing), C (Wireshark) and D (caching, failure demo).
+## B – Backend services (Task C)
+
+Folder: [`B-https-lb/`](B-https-lb/). Code: [backend/server.py](../../backend/server.py), run by [teamvks-backend.service](../../backend/teamvks-backend.service). Backend A = vm3 `192.168.64.13:3001`, Backend B = vm4 `192.168.64.14:3002`.
+
+| Brief item | File | What it shows |
+| --- | --- | --- |
+| Backend responds, `X-Backend` header | [C-manual-run-and-log.png](B-https-lb/C-manual-run-and-log.png) | first manual run: vm2 gets `200 OK` + `X-Backend: A`; vm3 logs `peer=192.168.64.12:<ephemeral port>` for each request |
+| Must not bind 127.0.0.1 | [C-bind-127-refused.png](B-https-lb/C-bind-127-refused.png) | bound to loopback: `LISTEN 127.0.0.1:3001`, local curl works, vm2 gets an instant refusal (RST) |
+| Installed as services | [C-services-installed.png](B-https-lb/C-services-installed.png) · [C-services-running.png](B-https-lb/C-services-running.png) | A/3001 and B/3002 from `/etc/default/teamvks-backend`, `active (running)`, `LISTEN 0.0.0.0:3001` / `:3002`, process owned by the unprivileged `teamvks-backend` user |
+| Both reachable from the edge | [C-backend-a-from-edge.txt](B-https-lb/C-backend-a-from-edge.txt) · [C-backend-b-from-edge.txt](B-https-lb/C-backend-b-from-edge.txt) · [C-both-from-edge.png](B-https-lb/C-both-from-edge.png) | vm2 → `X-Backend: A` / `X-Backend: B`, JSON `{"backend": …, "status": "ok"}` |
+| Service details + request log | [C-vm3-backend-a-service.txt](B-https-lb/C-vm3-backend-a-service.txt) · [C-vm4-backend-b-service.txt](B-https-lb/C-vm4-backend-b-service.txt) | `systemctl status`, listening socket, journal line for the edge's request |
+| Starts at boot | [C-reboot-survives.png](B-https-lb/C-reboot-survives.png) | after `sudo reboot` of vm3: up 2 min, service active since the new boot, vm2's curl answered without manual start |
+
+Evidence for the remaining form sections is added as each task is built: B1–B3 (HTTPS, reverse proxy, load balancing), C (Wireshark) and D (caching, failure demo).

@@ -1,0 +1,17 @@
+● teamvks-backend.service - teamvks REST backend (Task C)
+     Loaded: loaded (/etc/systemd/system/teamvks-backend.service; enabled; preset: enabled)
+     Active: active (running) since Sat 2026-10-03 18:16:04 UTC; 15min ago
+       Docs: https://github.com/vks-g/cn-private-network-platform/blob/main/docs/03-backends.md
+   Main PID: 2066 (python3)
+      Tasks: 1 (limit: 1005)
+     Memory: 9.5M (peak: 10.0M)
+        CPU: 463ms
+     CGroup: /system.slice/teamvks-backend.service
+             └─2066 /usr/bin/python3 /opt/teamvks/backend/server.py --id B --port 3002
+
+Oct 03 18:16:04 vm4-backend-b systemd[1]: Started teamvks-backend.service - teamvks REST backend (Task C).
+State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess
+LISTEN 0      5            0.0.0.0:3002      0.0.0.0:*    users:(("python3",pid=2066,fd=3))
+Oct 03 18:16:04 vm4-backend-b systemd[1]: Started teamvks-backend.service - teamvks REST backend (Task C).
+Oct 03 18:16:04 vm4-backend-b python3[2066]: Backend B listening on 0.0.0.0:3002
+Oct 03 18:31:07 vm4-backend-b python3[2066]: backend=B peer=192.168.64.12:57078 xff=- "GET /api/status HTTP/1.1" 200 -

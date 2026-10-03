@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Server: teamvks-backend/A
+Date: Sat, 03 Oct 2026 18:30:57 GMT
+Content-Type: application/json
+Content-Length: 58
+X-Backend: A
+
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}

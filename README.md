@@ -20,7 +20,7 @@ Submission type: **Type 3 – Virtual machines (UTM on Apple Silicon)**
 | --- | --- | --- |
 | A | Private LAN between 4 VMs | ✅ [evidence](evidence/phase1/README.md#a--private-lan-task-a--form-a1-a5) |
 | B | Private DNS (dnsmasq) for `teamvks.test` | ✅ [evidence](evidence/phase1/README.md#a--private-dns-task-b--form-a2-a3-a4) |
-| C | Two REST backends (A on 3001, B on 3002) | ☐ |
+| C | Two REST backends (A on 3001, B on 3002) | ✅ [evidence](evidence/phase1/README.md#b--backend-services-task-c) |
 | D | nginx reverse proxy + round-robin load balancer | ☐ |
 | E | HTTPS with a local certificate authority | ☐ |
 | F | HTTP caching (Cache-Control, ETag, 304) | ☐ |
