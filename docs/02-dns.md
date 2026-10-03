@@ -25,35 +25,40 @@
 
 DNS only **finds the address**. Once the client knows `192.168.64.12`, DNS plays no further part: the next step is a TCP connection (and later TLS + HTTP) straight to that IP.
 
+Commands are labelled with **where** to run them: a VM's SSH pane (you keep one open per VM) or the **Mac**.
+
 ## 1. Check the upstream first
 
-dnsmasq will forward non-project names to the Mac, so make sure the Mac answers. From the repo folder on your Mac:
+dnsmasq will forward non-project names to the Mac, so make sure the Mac answers.
+
+**vm1 pane:**
 
 ```bash
-cd ~/Documents/Sem_5_Projects/CN/cn-private-network-platform
-ssh vm1 'dig @192.168.64.1 github.com +short'
+dig @192.168.64.1 github.com +short
 ```
 
 You should get one or more IP addresses. If it times out, stop and tell me.
 
 ## 2. Install dnsmasq on vm1 (expect it to fail to start)
 
+**vm1 pane:**
+
 ```bash
-ssh -t vm1 'sudo apt install -y dnsmasq'
-ssh vm1 'systemctl status dnsmasq --no-pager | head -15'
+sudo apt install -y dnsmasq
+systemctl status dnsmasq --no-pager | head -15
 ```
 
 The service will most likely show **failed** with *"failed to create listening socket for port 53: Address already in use"*. Find out who already owns port 53:
 
 ```bash
-ssh -t vm1 "sudo ss -lunp 'sport = :53'"
+sudo ss -lunp 'sport = :53'
 ```
 
 You'll see `systemd-resolve` on `127.0.0.53` and `127.0.0.54`. That's Ubuntu's local resolver cache. With no config, dnsmasq tries to grab port 53 on **every** address (`0.0.0.0:53`) and collides with it. Our config fixes this with `bind-dynamic`: dnsmasq binds only its own addresses and leaves `127.0.0.53` alone.
 
 ## 3. Deploy the config
 
-On vm1 (`ssh vm1`):
+**vm1 pane:**
 
 ```bash
 cd ~/cn && git pull
@@ -73,7 +78,7 @@ The last command should now show **two owners side by side**:
 
 ## 4. Test the server before switching any client
 
-Still on vm1:
+**vm1 pane:**
 
 ```bash
 dig @192.168.64.11 app.teamvks.test      # ANSWER: app.teamvks.test. 0 IN A 192.168.64.12
@@ -81,10 +86,12 @@ dig @192.168.64.11 github.com +short     # forwarded upstream: real IPs
 dig @192.168.64.11 nope.teamvks.test     # status: NXDOMAIN (never forwarded, thanks to local=)
 ```
 
-Then prove the server is reachable **over the LAN**. Run this from the Mac:
+Then prove the server is reachable **over the LAN**.
+
+**vm4 pane:**
 
 ```bash
-ssh vm4 'dig @192.168.64.11 app.teamvks.test +short'   # → 192.168.64.12
+dig @192.168.64.11 app.teamvks.test +short   # → 192.168.64.12
 ```
 
 `@192.168.64.11` means "ask this server directly". It tests the server without touching the VM's resolver settings.
@@ -96,20 +103,21 @@ Two changes per VM:
 1. **netplan**: the resolver becomes `192.168.64.11`. The updated files are already in `configs/*/netplan/`.
 2. **`/etc/resolv.conf`**: by default Ubuntu points it at `127.0.0.53` (systemd-resolved's local cache). `dig` would then report `SERVER: 127.0.0.53`, which hides our DNS server and fails form A3. Re-pointing the symlink makes programs ask `192.168.64.11` directly. It also removes the local cache, so every lookup really goes over the wire, which you'll want in Task G.
 
-Run from the Mac; it asks for the sudo password once per VM:
+**All four panes** (vm1 first), the same block:
 
 ```bash
-for h in vm1 vm2 vm3 vm4; do
-  ssh -t $h 'cd ~/cn && git pull -q \
-    && sudo install -m 600 ~/cn/configs/$(hostname)/netplan/60-static.yaml /etc/netplan/60-static.yaml \
-    && sudo netplan apply \
-    && sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf \
-    && echo "== $(hostname)" && ls -l /etc/resolv.conf && grep nameserver /etc/resolv.conf'
-done
+cd ~/cn && git pull
+sudo install -m 600 ~/cn/configs/$(hostname)/netplan/60-static.yaml /etc/netplan/60-static.yaml
+sudo netplan apply
+ls -l /etc/resolv.conf
+sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+ls -l /etc/resolv.conf
+grep nameserver /etc/resolv.conf
 ```
 
-- `$(hostname)` is inside single quotes, so it runs on the VM. Each VM picks its own folder (`configs/vm2-edge/…`).
+- `$(hostname)` makes each VM pick its own folder (`configs/vm2-edge/…`).
 - `netplan apply` is safe over SSH this time because the IP address doesn't change.
+- The first `ls -l` shows the default (`-> ../run/systemd/resolve/stub-resolv.conf`), the second the new target.
 - An "Open vSwitch" warning is harmless.
 
 **Expected for every VM:** `/etc/resolv.conf -> /run/systemd/resolve/resolv.conf` and exactly one line, `nameserver 192.168.64.11`.
@@ -118,19 +126,30 @@ done
 
 Check that the internet still works through our DNS:
 
+**vm3 pane:**
+
 ```bash
-ssh vm3 'dig github.com +short'     # real IPs, via dnsmasq → Mac
-ssh -t vm3 'sudo apt update'        # no "Temporary failure resolving" errors
+dig github.com +short     # real IPs, via dnsmasq → Mac
+sudo apt update           # no "Temporary failure resolving" errors
 ```
 
 ## 6. Evidence: dig from client VMs (form A3)
 
-From the repo folder on the Mac:
+Each VM saves its output in `~/evidence/`; step 8 copies everything into the repo in one go.
+
+**vm4 pane:**
 
 ```bash
-ssh vm4 dig app.teamvks.test | tee evidence/phase1/A-lan-dns/A3-dig-app-from-vm4.txt
-ssh vm4 dig api.teamvks.test | tee evidence/phase1/A-lan-dns/A3-dig-api-from-vm4.txt
-ssh vm2 dig app.teamvks.test | tee evidence/phase1/A-lan-dns/A3-dig-app-from-vm2.txt
+mkdir -p ~/evidence
+dig app.teamvks.test | tee ~/evidence/A3-dig-app-from-vm4.txt
+dig api.teamvks.test | tee ~/evidence/A3-dig-api-from-vm4.txt
+```
+
+**vm2 pane:**
+
+```bash
+mkdir -p ~/evidence
+dig app.teamvks.test | tee ~/evidence/A3-dig-app-from-vm2.txt
 ```
 
 In each output, check:
@@ -146,18 +165,34 @@ That covers the brief's "at least two client machines resolve through the team D
 
 ## 7. Evidence: public DNS doesn't know the name (form A4)
 
+**vm4 pane:**
+
 ```bash
-ssh vm4 dig @8.8.8.8 app.teamvks.test | tee evidence/phase1/A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt
+dig @8.8.8.8 app.teamvks.test | tee ~/evidence/A4-dig-8.8.8.8-nxdomain.txt
 ```
 
 Expect `status: NXDOMAIN`. The AUTHORITY section shows the root zone's SOA (`a.root-servers.net.`): the root servers themselves say `.test` has no owner. If your network blocks outside DNS you'll get a timeout instead, which the form also accepts.
 
 ## 8. Evidence: dnsmasq config and query log (form A2)
 
+Run this **after** steps 6–7, so the log contains those lookups.
+
+**vm1 pane:**
+
 ```bash
-ssh vm1 "grep -Ev '^(#|$)' /etc/dnsmasq.d/teamvks.conf" | tee evidence/phase1/A-lan-dns/A2-dnsmasq-conf.txt
-ssh vm1 'journalctl -u dnsmasq -n 40 --no-pager' | tee evidence/phase1/A-lan-dns/A2-dnsmasq-query-log.txt
+mkdir -p ~/evidence
+grep -Ev '^(#|$)' /etc/dnsmasq.d/teamvks.conf | tee ~/evidence/A2-dnsmasq-conf.txt
+journalctl -u dnsmasq -n 40 --no-pager | tee ~/evidence/A2-dnsmasq-query-log.txt
 ```
+
+**Mac** (copy all evidence into the repo):
+
+```bash
+cd ~/Documents/Sem_5_Projects/CN/cn-private-network-platform
+for h in vm1 vm2 vm4; do scp "${h}:evidence/*" evidence/phase1/A-lan-dns/; done
+```
+
+Keep the braces in `"${h}:…"`. In zsh, `$h:e` is a modifier ("extension of `$h`"), so `"$h:evidence/*"` silently turns into `vidence/*`.
 
 The first file is exactly what form A2 asks for: `interface=`, `listen-address=` and the `address=` lines. In the log, look for:
 
@@ -165,11 +200,18 @@ The first file is exactly what form A2 asks for: `interface=`, `listen-address=`
 - `config app.teamvks.test is 192.168.64.12`: answered from our config;
 - `forwarded github.com to 192.168.64.1`: everything else goes upstream.
 
-If `journalctl` says you lack permission, run it as `ssh -t vm1 'sudo journalctl …'`.
+If `journalctl` says you lack permission, put `sudo` in front of it.
 
 ## 9. Your Mac as a client too
 
 macOS can send just one domain to a specific DNS server: a file in `/etc/resolver/` named after the domain.
+
+**Mac.** Run `sudo -v` **on its own first** and type your Mac password. sudo then remembers it for a few minutes. If you paste the whole block straight away, the password prompt swallows the next pasted lines as "passwords" and every `sudo` fails.
+
+```bash
+cd ~/Documents/Sem_5_Projects/CN/cn-private-network-platform
+sudo -v
+```
 
 ```bash
 sudo mkdir -p /etc/resolver
@@ -185,7 +227,7 @@ ping -c 2 app.teamvks.test                      # by name, never by IP
 
 1. Find vm4's switch port: `ifconfig bridge100`, Address cache, MAC `92:b1:96:9b:dc:31`.
 2. In Wireshark, capture on that `vmenet` port with display filter `dns`.
-3. Run `ssh vm4 dig app.teamvks.test`.
+3. **vm4 pane:** `dig app.teamvks.test`.
 
 You'll see two packets:
 
@@ -227,6 +269,8 @@ Task G redoes this cleanly, together with TCP and TLS.
 | `apt install` ends with a dpkg error about dnsmasq | it couldn't start (step 2). Deploy the config (step 3), then `sudo dpkg --configure -a` |
 | dnsmasq still "Address already in use" after step 3 | config not in `/etc/dnsmasq.d/`, or `bind-dynamic` missing: `sudo dnsmasq --test`, `sudo ss -lunp 'sport = :53'` |
 | `dig` on a VM shows `SERVER: 127.0.0.53` | the resolv.conf symlink from step 5 wasn't made on that VM |
+| Mac: `sudo: 3 incorrect password attempts`, then `No such file or directory` | a pasted block fed its own lines to the password prompt: run `sudo -v` alone first (step 9) |
+| `cp: vidence/*: No such file or directory` on the Mac | zsh read `$h:e` as a modifier: write `"${h}:evidence/*"` |
 | `/etc/resolv.conf` lists a second `nameserver fe80::…` | the VM still accepts the Mac's IPv6 router adverts: reinstall the repo's netplan file (it has `accept-ra: false`) and `sudo netplan apply` |
 | `dig` from vm4 times out | dnsmasq down or not on 192.168.64.11: `systemctl status dnsmasq`, `ss -lunp` on vm1 |
 | `apt update` fails on VMs after step 5 | forwarding broken: `dig @192.168.64.11 github.com` on vm1; check `server=192.168.64.1` |
