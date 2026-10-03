@@ -10,7 +10,7 @@ Text to paste into the Google Form, taken from the real output in this folder. T
 | Submission type | Type 3 – Virtual machines (UTM) |
 | GitHub repository URL | https://github.com/vks-g/cn-private-network-platform |
 | Recording Drive link | _after the video is recorded_ |
-| Student names and enrollment numbers | `<enrollment number> <your name>` |
+| Student names and enrollment numbers | `2401020094 Gokul VKS` |
 
 ## A1 – Machine IPs and roles
 

@@ -10,7 +10,7 @@ A client types `https://app.teamvks.test`. The name is resolved by our own DNS s
 
 | Name | Enrollment No. | Work mode |
 | --- | --- | --- |
-| `<your name>` | `<enrollment number>` | Solo |
+| Gokul VKS | 2401020094 | Solo |
 
 Submission type: **Type 3 – Virtual machines (UTM on Apple Silicon)**
 
