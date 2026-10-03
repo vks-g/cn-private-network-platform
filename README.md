@@ -59,5 +59,6 @@ All Phase 1 evidence is indexed in [evidence/phase1/README.md](evidence/phase1/R
 Each guide covers the concept, the commands, the expected output, the screenshots to take and viva practice questions.
 
 1. [UTM lab setup – private LAN (Task A)](docs/01-utm-lab-setup.md)
+2. [Private DNS with dnsmasq (Task B)](docs/02-dns.md)
 
 More guides are added as each task is built.
