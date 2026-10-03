@@ -84,5 +84,6 @@ Each guide covers the concept, the commands, the expected output, the screenshot
 2. [Private DNS with dnsmasq (Task B)](docs/02-dns.md)
 3. [Two REST backends (Task C)](docs/03-backends.md)
 4. [Edge reverse proxy and load balancer (Task D)](docs/04-edge-load-balancer.md)
+5. [HTTPS with our own certificate authority (Task E)](docs/05-tls.md)
 
 More guides are added as each task is built.
