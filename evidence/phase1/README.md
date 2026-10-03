@@ -23,4 +23,21 @@ Folder: [`A-lan-dns/`](A-lan-dns/)
 | Capture point | [A-wireshark-bridge100-broadcast-only.png](A-lan-dns/A-wireshark-bridge100-broadcast-only.png) | on `bridge100` only the broadcast ARP request is visible; unicast VM↔VM frames never reach the Mac's port |
 | ARP + ICMP on the wire | [A-wireshark-vmenet0-arp-icmp.png](A-lan-dns/A-wireshark-vmenet0-arp-icmp.png) | on vm2's port: ARP request (broadcast), ARP reply (unicast), 3 ICMP echo request/reply pairs, Ethernet II → IPv4 → ICMP expanded |
 
-Evidence for the remaining form sections is added as each task is built: A2–A4 (DNS), B (HTTPS, reverse proxy, load balancing), C (Wireshark) and D (caching, failure demo).
+## A – Private DNS (Task B · form A2, A3, A4)
+
+Folder: [`A-lan-dns/`](A-lan-dns/). Server: dnsmasq on vm1-dns (`192.168.64.11`). Records: `app.teamvks.test`, `api.teamvks.test` → `192.168.64.12` (the edge).
+
+| Form / brief item | File | What it shows |
+| --- | --- | --- |
+| Upstream check | [A2-upstream-check.png](A-lan-dns/A2-upstream-check.png) | the Mac's forwarder (`192.168.64.1`) answers before dnsmasq relies on it |
+| Port 53 conflict | [A2-dnsmasq-port53-before.png](A-lan-dns/A2-dnsmasq-port53-before.png) | fresh install: dnsmasq fails with "Address already in use"; `systemd-resolve` owns `127.0.0.53:53` |
+| A2 dnsmasq configuration | [A2-dnsmasq-conf.txt](A-lan-dns/A2-dnsmasq-conf.txt) · [full commented file](../../configs/vm1-dns/dnsmasq.d/teamvks.conf) | `interface=`, `listen-address=192.168.64.11`, `bind-dynamic`, `local=`, both `address=` lines, forwarding |
+| A2 deploy | [A2-dnsmasq-deploy.png](A-lan-dns/A2-dnsmasq-deploy.png) | `dnsmasq --test` OK, service `active` + `enabled` |
+| A2 listening sockets | [A2-dnsmasq-port53-after.png](A-lan-dns/A2-dnsmasq-port53-after.png) | dnsmasq on `192.168.64.11:53` next to systemd-resolved on `127.0.0.53:53` |
+| A2 query log | [A2-dnsmasq-query-log.txt](A-lan-dns/A2-dnsmasq-query-log.txt) | `query[A] app.teamvks.test from 192.168.64.14` → `config … is 192.168.64.12`; other names `forwarded … to 192.168.64.1` and `cached` |
+| Server tests | [A3-dig-at-server-app.png](A-lan-dns/A3-dig-at-server-app.png) · [A3-dig-at-server-nxdomain-and-lan.png](A-lan-dns/A3-dig-at-server-nxdomain-and-lan.png) | authoritative answer (`aa`), forwarding, `NXDOMAIN` for unknown names in our zone, reachable from vm4 |
+| Client resolver setup | [A3-resolv-conf-symlink-ra-dns.png](A-lan-dns/A3-resolv-conf-symlink-ra-dns.png) · [A3-resolv-conf-after-fix.png](A-lan-dns/A3-resolv-conf-after-fix.png) | `/etc/resolv.conf` re-pointed from `127.0.0.53` to the real server; the Mac's IPv6 router-advert DNS removed with `accept-ra: false`; all four VMs end with only `nameserver 192.168.64.11` |
+| A3 dig from a client | [A3-dig-app-from-vm4.txt](A-lan-dns/A3-dig-app-from-vm4.txt) · [A3-dig-api-from-vm4.txt](A-lan-dns/A3-dig-api-from-vm4.txt) · [A3-dig-app-from-vm2.txt](A-lan-dns/A3-dig-app-from-vm2.txt) · [A3-A4-dig-from-vm4.png](A-lan-dns/A3-A4-dig-from-vm4.png) | two clients (vm4, vm2): `NOERROR`, `aa`, `app.teamvks.test. 0 IN A 192.168.64.12`, `SERVER: 192.168.64.11#53 (UDP)` |
+| A4 public DNS | [A4-dig-8.8.8.8-nxdomain.txt](A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt) | `status: NXDOMAIN` from 8.8.8.8, root-zone SOA in AUTHORITY, `ad` (DNSSEC-validated non-existence) |
+
+Evidence for the remaining form sections is added as each task is built: B (HTTPS, reverse proxy, load balancing), C (Wireshark) and D (caching, failure demo).

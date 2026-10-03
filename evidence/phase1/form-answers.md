@@ -41,6 +41,75 @@ All replies ttl=64: same layer-2 segment, no router hop.
 
 Source: [A-lan-dns/A5-ping-matrix.txt](A-lan-dns/A5-ping-matrix.txt)
 
-## A2, A3, A4 · B · C · D
+## A2 – dnsmasq configuration
+
+```text
+interface=enp0s1
+listen-address=192.168.64.11
+bind-dynamic
+local=/teamvks.test/
+address=/app.teamvks.test/192.168.64.12
+address=/api.teamvks.test/192.168.64.12
+no-resolv
+server=192.168.64.1
+domain-needed
+bogus-priv
+log-queries
+```
+
+Source: `/etc/dnsmasq.d/teamvks.conf` on vm1-dns (comments stripped). Full commented file: [configs/vm1-dns/dnsmasq.d/teamvks.conf](../../configs/vm1-dns/dnsmasq.d/teamvks.conf)
+
+## A3 – `dig app.teamvks.test` from a client (vm4-backend-b)
+
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.7-Ubuntu <<>> app.teamvks.test
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 33458
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;app.teamvks.test.		IN	A
+
+;; ANSWER SECTION:
+app.teamvks.test.	0	IN	A	192.168.64.12
+
+;; Query time: 3 msec
+;; SERVER: 192.168.64.11#53(192.168.64.11) (UDP)
+;; WHEN: Sat Oct 03 17:08:46 UTC 2026
+;; MSG SIZE  rcvd: 61
+```
+
+Source: [A-lan-dns/A3-dig-app-from-vm4.txt](A-lan-dns/A3-dig-app-from-vm4.txt). ANSWER = the edge `192.168.64.12`; SERVER = our DNS `192.168.64.11`. vm2-edge gives the same result: [A3-dig-app-from-vm2.txt](A-lan-dns/A3-dig-app-from-vm2.txt).
+
+## A4 – `dig @8.8.8.8 app.teamvks.test`
+
+```text
+; <<>> DiG 9.18.39-0ubuntu0.24.04.7-Ubuntu <<>> @8.8.8.8 app.teamvks.test
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 33191
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 512
+;; QUESTION SECTION:
+;app.teamvks.test.		IN	A
+
+;; AUTHORITY SECTION:
+.			85695	IN	SOA	a.root-servers.net. nstld.verisign-grs.com. 2026100300 1800 900 604800 86400
+
+;; Query time: 182 msec
+;; SERVER: 8.8.8.8#53(8.8.8.8) (UDP)
+;; WHEN: Sat Oct 03 17:08:46 UTC 2026
+;; MSG SIZE  rcvd: 120
+```
+
+Source: [A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt](A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt). `NXDOMAIN`: the name exists only on our private DNS.
+
+## B · C · D
 
 _Filled in as each task is completed._

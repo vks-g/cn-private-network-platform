@@ -1,0 +1,20 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.7-Ubuntu <<>> api.teamvks.test
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 15090
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;api.teamvks.test.		IN	A
+
+;; ANSWER SECTION:
+api.teamvks.test.	0	IN	A	192.168.64.12
+
+;; Query time: 1 msec
+;; SERVER: 192.168.64.11#53(192.168.64.11) (UDP)
+;; WHEN: Sat Oct 03 17:08:46 UTC 2026
+;; MSG SIZE  rcvd: 61
+
