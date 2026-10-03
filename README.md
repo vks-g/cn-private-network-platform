@@ -74,7 +74,7 @@ curl -i http://192.168.64.13:3001/api/status      # X-Backend: A
 curl -i http://192.168.64.14:3002/api/status      # X-Backend: B
 ```
 
-Endpoints: `GET /` (HTML status page), `GET /api/status` (`{"backend": "A", "status": "ok", ...}`). Every response carries `X-Backend: A|B`. Details: [backend/README.md](backend/README.md).
+Endpoints: `GET /` (HTML status page), `GET /api/status` (`{"backend": "A", "status": "ok", ...}`, never cached) and `GET /api/info` (cacheable: `Cache-Control: public, max-age=60`, `ETag`, `304 Not Modified`). Every response carries `X-Backend: A|B`. Details: [backend/README.md](backend/README.md).
 
 ## Guides
 

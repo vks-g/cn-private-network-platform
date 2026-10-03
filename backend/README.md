@@ -1,4 +1,4 @@
-# Backend (Task C)
+# Backend (Tasks C and F)
 
 One small Python program, [`server.py`](server.py), runs as two instances:
 
@@ -13,8 +13,9 @@ It uses only the Python standard library (Ubuntu already ships `python3`), so th
 
 | Request | Response |
 | --- | --- |
-| `GET /` | small HTML page: backend id, host, the TCP peer and the original client (`X-Forwarded-For`) |
-| `GET /api/status` | `{"backend": "A", "status": "ok", "host": "vm3-backend-a"}` |
+| `GET /` | small HTML page: backend id, host, the TCP peer and the original client (`X-Forwarded-For`). `Cache-Control: no-store` |
+| `GET /api/status` | `{"backend": "A", "status": "ok", "host": "vm3-backend-a"}`. `Cache-Control: no-store` (live data, never cached) |
+| `GET /api/info` | a fixed JSON document, **identical on A and B**. `Cache-Control: public, max-age=60`, `ETag` (hash of the body, so also identical on A and B), `Last-Modified`; answers `304 Not Modified` to `If-None-Match` / `If-Modified-Since` when the client's copy is current |
 | anything else | `404` with a JSON error |
 | every response | header `X-Backend: A` (or `B`), so repeated requests show which backend answered |
 
