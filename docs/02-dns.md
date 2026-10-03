@@ -112,7 +112,9 @@ done
 - `netplan apply` is safe over SSH this time because the IP address doesn't change.
 - An "Open vSwitch" warning is harmless.
 
-**Expected for every VM:** `/etc/resolv.conf -> /run/systemd/resolve/resolv.conf` and exactly one line, `nameserver 192.168.64.11`. If you see a second nameserver line (e.g. an `fd40:…` address), tell me before continuing.
+**Expected for every VM:** `/etc/resolv.conf -> /run/systemd/resolve/resolv.conf` and exactly one line, `nameserver 192.168.64.11`.
+
+**Why the netplan files contain `accept-ra: false`.** The Mac sends IPv6 Router Advertisements on the virtual switch. They gave the VMs their `fd40:…` addresses, and they also announce the Mac (`fe80::80a9:97ff:fe14:6d64`) as a DNS server. Without this line, systemd-resolved lists that as a **second, hidden** nameserver. Normal lookups still go to vm1 first, but whenever vm1 is down the VMs would quietly fall back to the Mac. That would spoil the DNS failure demo and, in Phase 2, the backup-DNS test. The lab is IPv4-only, so ignoring the adverts costs nothing; each VM keeps its link-local `fe80::` address.
 
 Check that the internet still works through our DNS:
 
@@ -216,6 +218,7 @@ Task G redoes this cleanly, together with TCP and TLS.
 8. DNS used UDP here. When does DNS switch to TCP?
 9. Which cloud service plays the role of vm1? (Hint: Route 53 private hosted zone.)
 10. If vm1 is switched off, what still works and what breaks? (This is failure demo 1.)
+11. Where did the extra `nameserver fe80::…` come from, and why would it have spoiled the DNS failure demo?
 
 ## Troubleshooting
 
@@ -224,6 +227,7 @@ Task G redoes this cleanly, together with TCP and TLS.
 | `apt install` ends with a dpkg error about dnsmasq | it couldn't start (step 2). Deploy the config (step 3), then `sudo dpkg --configure -a` |
 | dnsmasq still "Address already in use" after step 3 | config not in `/etc/dnsmasq.d/`, or `bind-dynamic` missing: `sudo dnsmasq --test`, `sudo ss -lunp 'sport = :53'` |
 | `dig` on a VM shows `SERVER: 127.0.0.53` | the resolv.conf symlink from step 5 wasn't made on that VM |
+| `/etc/resolv.conf` lists a second `nameserver fe80::…` | the VM still accepts the Mac's IPv6 router adverts: reinstall the repo's netplan file (it has `accept-ra: false`) and `sudo netplan apply` |
 | `dig` from vm4 times out | dnsmasq down or not on 192.168.64.11: `systemctl status dnsmasq`, `ss -lunp` on vm1 |
 | `apt update` fails on VMs after step 5 | forwarding broken: `dig @192.168.64.11 github.com` on vm1; check `server=192.168.64.1` |
 | `status: NXDOMAIN` for `app.teamvks.test` from our server | typo in an `address=` line: compare with the repo file, `sudo dnsmasq --test`, restart |

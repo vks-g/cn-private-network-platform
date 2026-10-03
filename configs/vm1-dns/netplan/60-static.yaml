@@ -8,6 +8,9 @@ network:
     enp0s1:                     # check the name with: ip -br link
       dhcp4: false
       dhcp6: false
+      # Ignore the Mac's IPv6 router adverts: they would add the Mac as a second,
+      # hidden DNS server (fe80::…). The lab is IPv4-only; link-local fe80:: stays.
+      accept-ra: false
       addresses:
         - 192.168.64.11/24      # fixed address; /24 = mask 255.255.255.0
       routes:
