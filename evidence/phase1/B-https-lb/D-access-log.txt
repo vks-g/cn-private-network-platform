@@ -1,0 +1,12 @@
+192.168.64.14:57658 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.008
+192.168.64.14:57664 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+192.168.64.14:57676 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+192.168.64.14:57692 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+192.168.64.14:57694 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.001
+192.168.64.14:57700 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+192.168.64.14:57714 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.001
+192.168.64.14:57718 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+192.168.64.14:57722 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+192.168.64.14:57738 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.001
+192.168.64.14:57746 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.001
+192.168.64.14:57762 "GET /api/status HTTP/1.1" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
