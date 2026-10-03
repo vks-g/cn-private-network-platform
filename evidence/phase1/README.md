@@ -88,4 +88,20 @@ Folder: [`B-https-lb/`](B-https-lb/). TLS files: [tls/](../../tls/) (CA config, 
 | Edge log | [E-access-log-https.txt](B-https-lb/E-access-log-https.txt) | `HTTP/2.0` vs `HTTP/1.1`, `tls=TLSv1.3/TLS_AES_256_GCM_SHA384` vs `tls=TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384`, redirect `301 tls=-/- upstream=-` |
 | Browser | [E-safari-padlock-cert-chain.png](B-https-lb/E-safari-padlock-cert-chain.png) | Safari padlock, chain `teamvks Lab Root CA → app.teamvks.test`, "This certificate is valid" |
 
-Evidence for the remaining form sections is added as each task is built: C (Wireshark) and D (caching, failure demo).
+## D – HTTP caching and the edge cache (Task F · form D1, D2)
+
+Folder: [`D-caching-failures/`](D-caching-failures/). Cacheable endpoint: `/api/info` ([backend/server.py](../../backend/server.py)); edge cache: `location = /api/info` in [teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf).
+
+| Form / brief item | File | What it shows |
+| --- | --- | --- |
+| New backend deployed | [F-backends-redeployed.png](D-caching-failures/F-backends-redeployed.png) | both services restarted and `active` |
+| Origin caching headers + 304 | [F-origin-200-304.txt](D-caching-failures/F-origin-200-304.txt) · [F-origin-200-304.png](D-caching-failures/F-origin-200-304.png) | A and B send the **same** `ETag "2f9bf8e0a1ee62ec"` and `Last-Modified`; A's ETag sent to B → `304 Not Modified` (no body); `If-Modified-Since` → `304`; `/api/status` is `no-store` |
+| Edge cache enabled | [F-nginx-cache-on.png](D-caching-failures/F-nginx-cache-on.png) | `nginx -t` ok, cache directory owned by `www-data`, mode 700 |
+| **D1** headers of the cached endpoint | [F-D1-headers.txt](D-caching-failures/F-D1-headers.txt) · [F-D1-headers-miss.png](D-caching-failures/F-D1-headers-miss.png) | `cache-control: public, max-age=60`, `etag`, `last-modified`, `x-cache-status: MISS` |
+| Cache effect: HIT | [F-edge-hits.txt](D-caching-failures/F-edge-hits.txt) · [F-hits-then-revalidated.png](D-caching-failures/F-hits-then-revalidated.png) | 5× `HIT`, always the same `x-backend`: no backend contacted, no round-robin |
+| Cache effect: 304 | [F-D1-304.txt](D-caching-failures/F-D1-304.txt) · [F-D1-304.png](D-caching-failures/F-D1-304.png) | `If-None-Match` → `HTTP/2 304` from the edge (`x-cache-status: HIT`), no body |
+| Stale → revalidated | [F-hits-then-revalidated.png](D-caching-failures/F-hits-then-revalidated.png) · [F-edge-log.txt](D-caching-failures/F-edge-log.txt) · [F-edge-log.png](D-caching-failures/F-edge-log.png) | after 61 s: `REVALIDATED`; log `cache=MISS upstream=…14:3002 200` → `cache=HIT upstream=-` ×9 → `cache=REVALIDATED upstream=…13:3001 upstream_status=304` (copy fetched from B, confirmed by A: shared ETag) |
+| Backends' view | [F-backend-logs.png](D-caching-failures/F-backend-logs.png) | only a handful of `/api/info` requests reached A and B; the edge's revalidation arrived at A as a `304` |
+| Live data not cached | [F-status-not-cached.png](D-caching-failures/F-status-not-cached.png) | `/api/status`: `cache-control: no-store`, no `x-cache-status`, A/B still alternating |
+
+Evidence for the remaining form sections is added as each task is built: C (Wireshark) and D3 (failure demo).

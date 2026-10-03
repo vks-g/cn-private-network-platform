@@ -1,0 +1,11 @@
+HTTP/2 200 
+server: nginx/1.24.0 (Ubuntu)
+date: Sat, 03 Oct 2026 20:16:14 GMT
+content-type: application/json
+content-length: 149
+cache-control: public, max-age=60
+etag: "2f9bf8e0a1ee62ec"
+last-modified: Sat, 03 Oct 2026 18:00:00 GMT
+x-backend: A
+x-cache-status: MISS
+

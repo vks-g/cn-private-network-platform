@@ -23,7 +23,7 @@ Submission type: **Type 3 – Virtual machines (UTM on Apple Silicon)**
 | C | Two REST backends (A on 3001, B on 3002) | ✅ [evidence](evidence/phase1/README.md#b--backend-services-task-c) |
 | D | nginx reverse proxy + round-robin load balancer | ✅ [evidence](evidence/phase1/README.md#b--edge-reverse-proxy-and-load-balancing-task-d-http) |
 | E | HTTPS with a local certificate authority | ✅ [evidence](evidence/phase1/README.md#b--https-with-a-local-ca-task-e--form-b1-b2-b3) |
-| F | HTTP caching (Cache-Control, ETag, 304) | ☐ |
+| F | HTTP caching (Cache-Control, ETag, 304) | ✅ [evidence](evidence/phase1/README.md#d--http-caching-and-the-edge-cache-task-f--form-d1-d2) |
 | G | Wireshark evidence for DNS → TCP → TLS → HTTP | ☐ |
 | 6.3 | Failure demonstrations | ☐ |
 

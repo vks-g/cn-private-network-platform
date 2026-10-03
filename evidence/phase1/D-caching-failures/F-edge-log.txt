@@ -1,0 +1,12 @@
+192.168.64.14:59672 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=MISS upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.006
+192.168.64.14:59676 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:59682 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:59698 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:59700 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:43866 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:43870 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:43880 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:43890 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:43896 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-
+192.168.64.14:40304 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=REVALIDATED upstream=192.168.64.13:3001 upstream_status=304 upstream_time=0.006
+192.168.64.12:40924 "HEAD /api/info HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 cache=HIT upstream=- upstream_status=- upstream_time=-

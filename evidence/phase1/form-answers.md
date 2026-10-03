@@ -257,6 +257,56 @@ server {
 
 Source: `/etc/nginx/sites-available/teamvks` on vm2-edge (comments stripped). Full commented file: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf)
 
-## C · D
+## D1 – Response headers of the cache-enabled endpoint (`/api/info`)
+
+Caching is implemented on **`GET /api/info`** (backends set the headers; the edge vm2 also caches it). `/` and `/api/status` are deliberately `no-store`.
+
+First request (edge had no copy):
+
+```text
+$ curl -sI https://app.teamvks.test/api/info
+HTTP/2 200 
+server: nginx/1.24.0 (Ubuntu)
+date: Sat, 03 Oct 2026 20:16:14 GMT
+content-type: application/json
+content-length: 149
+cache-control: public, max-age=60
+etag: "2f9bf8e0a1ee62ec"
+last-modified: Sat, 03 Oct 2026 18:00:00 GMT
+x-backend: A
+x-cache-status: MISS
+```
+
+Conditional request with the ETag (cache effect):
+
+```text
+$ curl -si -H 'If-None-Match: "2f9bf8e0a1ee62ec"' https://app.teamvks.test/api/info
+HTTP/2 304 
+server: nginx/1.24.0 (Ubuntu)
+date: Sat, 03 Oct 2026 20:16:39 GMT
+cache-control: public, max-age=60
+etag: "2f9bf8e0a1ee62ec"
+last-modified: Sat, 03 Oct 2026 18:00:00 GMT
+x-backend: A
+x-cache-status: HIT
+```
+
+Repeated requests while fresh:
+
+```text
+x-backend: B x-cache-status: HIT
+x-backend: B x-cache-status: HIT
+x-backend: B x-cache-status: HIT
+x-backend: B x-cache-status: HIT
+x-backend: B x-cache-status: HIT
+```
+
+Sources: [F-D1-headers.txt](D-caching-failures/F-D1-headers.txt) · [F-D1-304.txt](D-caching-failures/F-D1-304.txt) · [F-edge-hits.txt](D-caching-failures/F-edge-hits.txt) · [F-edge-log.txt](D-caching-failures/F-edge-log.txt)
+
+## D2 – Explain `max-age`, `ETag` and `304` (2–4 sentences, **write this yourself**)
+
+_Write it in your own words from what you observed. Points to cover: what `max-age=60` let the edge do (5× HIT, no backend contacted); what the ETag is and why A and B share it (the copy fetched from B was confirmed by A); what the 304 saved (the body) and what it didn't (the round trip)._
+
+## C · D3
 
 _Filled in as each task is completed._

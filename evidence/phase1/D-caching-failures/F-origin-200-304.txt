@@ -1,0 +1,33 @@
+HTTP/1.1 200 OK
+Server: teamvks-backend/A
+Date: Sat, 03 Oct 2026 20:13:14 GMT
+Content-Type: application/json
+Content-Length: 149
+Cache-Control: public, max-age=60
+ETag: "2f9bf8e0a1ee62ec"
+Last-Modified: Sat, 03 Oct 2026 18:00:00 GMT
+X-Backend: A
+
+{"service": "teamvks private network platform", "endpoints": ["/", "/api/status", "/api/info"], "note": "this document is cacheable for 60 seconds"}
+
+HTTP/1.1 200 OK
+Server: teamvks-backend/B
+Date: Sat, 03 Oct 2026 20:13:14 GMT
+Content-Type: application/json
+Content-Length: 149
+Cache-Control: public, max-age=60
+ETag: "2f9bf8e0a1ee62ec"
+Last-Modified: Sat, 03 Oct 2026 18:00:00 GMT
+X-Backend: B
+
+ETag from A: "2f9bf8e0a1ee62ec"
+HTTP/1.1 304 Not Modified
+Server: teamvks-backend/B
+Date: Sat, 03 Oct 2026 20:13:14 GMT
+Cache-Control: public, max-age=60
+ETag: "2f9bf8e0a1ee62ec"
+Last-Modified: Sat, 03 Oct 2026 18:00:00 GMT
+X-Backend: B
+
+HTTP/1.1 304 Not Modified
+Cache-Control: no-store
