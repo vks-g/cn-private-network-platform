@@ -1,0 +1,15 @@
+# Extensions the CA writes into the edge's certificate when it signs the CSR.
+# Used on the Mac:
+#   openssl x509 -req -in private/teamvks-server.csr -CA teamvks-ca.crt -CAkey private/teamvks-ca.key \
+#     -CAcreateserial -days 397 -sha256 -extfile server.ext -out teamvks-server.crt
+
+# A server certificate, not a CA: it cannot sign anything.
+basicConstraints       = critical, CA:FALSE
+keyUsage               = critical, digitalSignature, keyEncipherment
+# Valid for TLS servers (browsers and Apple devices require this).
+extendedKeyUsage       = serverAuth
+# The names this certificate is valid for. Clients check the hostname they asked
+# for against this list; the old Common Name field is ignored.
+subjectAltName         = DNS:app.teamvks.test, DNS:api.teamvks.test
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid, issuer

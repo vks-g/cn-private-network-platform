@@ -1,0 +1,19 @@
+# OpenSSL settings for the lab's own certificate authority (CA).
+# Used once, on the Mac:
+#   openssl req -x509 -new -key private/teamvks-ca.key -sha256 -days 1825 -config ca.cnf -out teamvks-ca.crt
+
+[req]
+prompt             = no
+distinguished_name = ca_dn
+x509_extensions    = ca_ext
+
+[ca_dn]
+CN = teamvks Lab Root CA
+O  = teamvks CN Project
+
+[ca_ext]
+# This certificate belongs to a CA: it may sign other certificates ...
+basicConstraints     = critical, CA:TRUE, pathlen:0
+# ... and that is all its key is allowed to do.
+keyUsage             = critical, keyCertSign, cRLSign
+subjectKeyIdentifier = hash
