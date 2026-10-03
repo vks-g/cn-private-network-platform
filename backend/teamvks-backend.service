@@ -1,0 +1,19 @@
+# /etc/systemd/system/teamvks-backend.service on vm3-backend-a and vm4-backend-b
+# Install:  sudo install -m 644 ~/cn/backend/teamvks-backend.service /etc/systemd/system/
+[Unit]
+Description=teamvks REST backend (Task C)
+Documentation=https://github.com/vks-g/cn-private-network-platform/blob/main/docs/03-backends.md
+After=network.target
+
+[Service]
+# BACKEND_ID and BACKEND_PORT: A/3001 on vm3, B/3002 on vm4.
+EnvironmentFile=/etc/default/teamvks-backend
+ExecStart=/usr/bin/python3 /opt/teamvks/backend/server.py --id ${BACKEND_ID} --port ${BACKEND_PORT}
+# Ports above 1024 need no root, so run as a throwaway unprivileged user.
+DynamicUser=yes
+# Come back after a crash, but stay down after "systemctl stop" (failure demos).
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
