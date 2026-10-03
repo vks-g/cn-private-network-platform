@@ -1,0 +1,10 @@
+192.168.64.14:53706 "GET /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.016
+192.168.64.14:53710 "GET /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.006
+192.168.64.14:53726 "GET /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+192.168.64.14:53742 "GET /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+192.168.64.14:53746 "GET /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.001
+192.168.64.14:53754 "GET /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+192.168.64.14:50940 "HEAD /api/status HTTP/1.1" 301 tls=-/- upstream=- upstream_status=- upstream_time=-
+192.168.64.14:58710 "HEAD /api/status HTTP/1.1" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.005
+192.168.64.14:58714 "HEAD /api/status HTTP/2.0" 200 tls=TLSv1.3/TLS_AES_256_GCM_SHA384 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.010
+192.168.64.14:58722 "HEAD /api/status HTTP/2.0" 200 tls=TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.003

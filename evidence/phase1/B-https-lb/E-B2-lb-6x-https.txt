@@ -1,0 +1,18 @@
+HTTP/2 200 
+x-backend: B
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+HTTP/2 200 
+x-backend: A
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+HTTP/2 200 
+x-backend: B
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+HTTP/2 200 
+x-backend: A
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+HTTP/2 200 
+x-backend: B
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+HTTP/2 200 
+x-backend: A
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}

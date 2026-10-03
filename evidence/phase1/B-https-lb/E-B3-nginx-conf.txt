@@ -1,0 +1,34 @@
+log_format teamvks '$remote_addr:$remote_port "$request" $status '
+                   'tls=$ssl_protocol/$ssl_cipher '
+                   'upstream=$upstream_addr upstream_status=$upstream_status '
+                   'upstream_time=$upstream_response_time';
+upstream teamvks_backends {
+    zone teamvks_backends 64k;
+    server 192.168.64.13:3001 max_fails=1 fail_timeout=10s;   # Backend A (vm3)
+    server 192.168.64.14:3002 max_fails=1 fail_timeout=10s;   # Backend B (vm4)
+}
+server {
+    listen 80;
+    server_name app.teamvks.test api.teamvks.test;
+    access_log /var/log/nginx/teamvks-access.log teamvks;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl http2;
+    server_name app.teamvks.test api.teamvks.test;
+    ssl_certificate     /etc/nginx/tls/teamvks-server.crt;
+    ssl_certificate_key /etc/nginx/tls/teamvks-server.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    access_log /var/log/nginx/teamvks-access.log teamvks;
+    location / {
+        proxy_pass http://teamvks_backends;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout     2s;
+        proxy_next_upstream       error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
+    }
+}

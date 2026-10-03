@@ -14,6 +14,13 @@ The lab runs its own small certificate authority (CA). The CA signs one certific
 
 `.gitignore` blocks `tls/private/`, `*.key`, `*.csr` and `*.srl`, so private keys can't be committed by accident.
 
+## Current certificates
+
+| Certificate | Subject | Valid until | SHA-256 fingerprint |
+| --- | --- | --- | --- |
+| [`teamvks-ca.crt`](teamvks-ca.crt) | `CN=teamvks Lab Root CA, O=teamvks CN Project` | 2 Oct 2031 | `B2:F2:1C:09:A3:2E:96:ED:25:C6:7A:37:63:40:5F:A8:BF:FB:9E:93:33:B9:42:BE:7D:FE:A9:2C:F6:0B:4D:0C` |
+| [`teamvks-server.crt`](teamvks-server.crt) | `CN=app.teamvks.test, O=teamvks CN Project`, SAN `app.teamvks.test`, `api.teamvks.test` | 4 Nov 2027 | `7E:5C:B7:28:BB:AF:27:23:BE:96:EA:70:16:B6:7E:BB:46:D9:C1:DD:EF:0B:BC:59:DF:90:DD:4B:18:06:99:1A` |
+
 ## How the pieces were made
 
 ```text

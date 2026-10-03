@@ -22,7 +22,7 @@ Submission type: **Type 3 – Virtual machines (UTM on Apple Silicon)**
 | B | Private DNS (dnsmasq) for `teamvks.test` | ✅ [evidence](evidence/phase1/README.md#a--private-dns-task-b--form-a2-a3-a4) |
 | C | Two REST backends (A on 3001, B on 3002) | ✅ [evidence](evidence/phase1/README.md#b--backend-services-task-c) |
 | D | nginx reverse proxy + round-robin load balancer | ✅ [evidence](evidence/phase1/README.md#b--edge-reverse-proxy-and-load-balancing-task-d-http) |
-| E | HTTPS with a local certificate authority | ☐ |
+| E | HTTPS with a local certificate authority | ✅ [evidence](evidence/phase1/README.md#b--https-with-a-local-ca-task-e--form-b1-b2-b3) |
 | F | HTTP caching (Cache-Control, ETag, 304) | ☐ |
 | G | Wireshark evidence for DNS → TCP → TLS → HTTP | ☐ |
 | 6.3 | Failure demonstrations | ☐ |

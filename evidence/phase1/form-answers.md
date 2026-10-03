@@ -110,6 +110,153 @@ Source: [A-lan-dns/A3-dig-app-from-vm4.txt](A-lan-dns/A3-dig-app-from-vm4.txt). 
 
 Source: [A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt](A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt). `NXDOMAIN`: the name exists only on our private DNS.
 
-## B · C · D
+## B1 – `curl -v https://app.teamvks.test` (no `-k`), from vm4-backend-b
+
+```text
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Host app.teamvks.test:443 was resolved.
+* IPv6: (none)
+* IPv4: 192.168.64.12
+*   Trying 192.168.64.12:443...
+* Connected to app.teamvks.test (192.168.64.12) port 443
+* ALPN: curl offers h2,http/1.1
+} [5 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+} [512 bytes data]
+*  CAfile: /etc/ssl/certs/ca-certificates.crt
+*  CApath: /etc/ssl/certs
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+{ [19 bytes data]
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+{ [952 bytes data]
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+{ [264 bytes data]
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+{ [52 bytes data]
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+} [52 bytes data]
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519 / RSASSA-PSS
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: CN=app.teamvks.test; O=teamvks CN Project
+*  start date: Oct  3 19:44:50 2026 GMT
+*  expire date: Nov  4 19:44:50 2027 GMT
+*  subjectAltName: host "app.teamvks.test" matched cert's "app.teamvks.test"
+*  issuer: CN=teamvks Lab Root CA; O=teamvks CN Project
+*  SSL certificate verify ok.
+*   Certificate level 0: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 1: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+} [5 bytes data]
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://app.teamvks.test/
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: app.teamvks.test]
+* [HTTP/2] [1] [:path: /]
+* [HTTP/2] [1] [user-agent: curl/8.5.0]
+* [HTTP/2] [1] [accept: */*]
+} [5 bytes data]
+> GET / HTTP/2
+> Host: app.teamvks.test
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [281 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [265 bytes data]
+* old SSL session ID is stale, removing
+{ [5 bytes data]
+< HTTP/2 200 
+< server: nginx/1.24.0 (Ubuntu)
+< date: Sat, 03 Oct 2026 19:52:55 GMT
+< content-type: text/html; charset=utf-8
+< content-length: 392
+< x-backend: A
+< 
+{ [392 bytes data]
+
+100   392  100   392    0     0   9269      0 --:--:-- --:--:-- --:--:--  9560
+* Connection #0 to host app.teamvks.test left intact
+<!doctype html><meta charset=utf-8><title>teamvks - Backend A</title><h1>Backend A is running</h1><table><tr><th>Backend</th><td>A</td></tr><tr><th>Host</th><td>vm3-backend-a, port 3001</td></tr><tr><th>TCP connection from</th><td>192.168.64.12</td></tr><tr><th>Original client (X-Forwarded-For)</th><td>192.168.64.14</td></tr></table><p>JSON status: <a href="/api/status">/api/status</a></p>
+```
+
+Source: [B-https-lb/E-B1-curl-v.txt](B-https-lb/E-B1-curl-v.txt). Certificate issued by our local CA `teamvks Lab Root CA`, trusted on every client; SAN matches `app.teamvks.test`; `SSL certificate verify ok`.
+
+## B2 – 6 HTTPS requests showing both backends
+
+```text
+HTTP/2 200 
+x-backend: B
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+HTTP/2 200 
+x-backend: A
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+HTTP/2 200 
+x-backend: B
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+HTTP/2 200 
+x-backend: A
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+HTTP/2 200 
+x-backend: B
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+HTTP/2 200 
+x-backend: A
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+```
+
+Source: [B-https-lb/E-B2-lb-6x-https.txt](B-https-lb/E-B2-lb-6x-https.txt). Round-robin: B, A, B, A, B, A.
+
+## B3 – nginx upstream and server blocks
+
+```nginx
+log_format teamvks '$remote_addr:$remote_port "$request" $status '
+                   'tls=$ssl_protocol/$ssl_cipher '
+                   'upstream=$upstream_addr upstream_status=$upstream_status '
+                   'upstream_time=$upstream_response_time';
+upstream teamvks_backends {
+    zone teamvks_backends 64k;
+    server 192.168.64.13:3001 max_fails=1 fail_timeout=10s;   # Backend A (vm3)
+    server 192.168.64.14:3002 max_fails=1 fail_timeout=10s;   # Backend B (vm4)
+}
+server {
+    listen 80;
+    server_name app.teamvks.test api.teamvks.test;
+    access_log /var/log/nginx/teamvks-access.log teamvks;
+    return 301 https://$host$request_uri;
+}
+server {
+    listen 443 ssl http2;
+    server_name app.teamvks.test api.teamvks.test;
+    ssl_certificate     /etc/nginx/tls/teamvks-server.crt;
+    ssl_certificate_key /etc/nginx/tls/teamvks-server.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    access_log /var/log/nginx/teamvks-access.log teamvks;
+    location / {
+        proxy_pass http://teamvks_backends;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout     2s;
+        proxy_next_upstream       error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
+    }
+}
+```
+
+Source: `/etc/nginx/sites-available/teamvks` on vm2-edge (comments stripped). Full commented file: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf)
+
+## C · D
 
 _Filled in as each task is completed._

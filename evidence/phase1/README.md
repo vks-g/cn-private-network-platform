@@ -69,4 +69,23 @@ Folder: [`B-https-lb/`](B-https-lb/). Config: [configs/vm2-edge/nginx/teamvks.co
 | Raw outputs | [D-lb-6x-http.txt](B-https-lb/D-lb-6x-http.txt) · [D-access-log.txt](B-https-lb/D-access-log.txt) · [D-backend-a-log-via-edge.txt](B-https-lb/D-backend-a-log-via-edge.txt) · [D-backend-page-via-edge.html](B-https-lb/D-backend-page-via-edge.html) | the same runs as saved text: 6 alternating responses, 12 access-log lines, backend log with `peer=192.168.64.12 xff=192.168.64.14`, backend page as served through the edge |
 | One backend down (preview of D3) | [D-one-backend-down-and-restore.png](B-https-lb/D-one-backend-down-and-restore.png) | A stopped → 6× `200` from B; log line `upstream=192.168.64.13:3001, 192.168.64.14:3002 upstream_status=502, 200` (refused, retried on B in the same request); after restart A rejoins once `fail_timeout` (10 s) expires |
 
-Evidence for the remaining form sections is added as each task is built: B1–B3 (HTTPS), C (Wireshark) and D (caching, failure demo).
+## B – HTTPS with a local CA (Task E · form B1, B2, B3)
+
+Folder: [`B-https-lb/`](B-https-lb/). TLS files: [tls/](../../tls/) (CA config, extension file, the two **public** certificates). Edge config: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf).
+
+| Form / brief item | File | What it shows |
+| --- | --- | --- |
+| Local CA | [E-ca-created.png](B-https-lb/E-ca-created.png) | `teamvks Lab Root CA`: subject = issuer (self-signed root), `CA:TRUE, pathlen:0`, may only sign certificates |
+| Key + CSR on the edge | [E-csr-on-vm2.png](B-https-lb/E-csr-on-vm2.png) | vm2 generates its own private key; the CSR (`CN=app.teamvks.test`) self-signature verifies |
+| Certificate signed | [E-cert-signed.png](B-https-lb/E-cert-signed.png) | `verify OK`, issuer = our CA, SAN `app.teamvks.test`, `api.teamvks.test`, `serverAuth`, 397 days; `git status` shows only public `.crt` files |
+| TLS termination on vm2 | [E-nginx-443.png](B-https-lb/E-nginx-443.png) | key mode 600 root, `nginx -t` ok, listening on 80 and 443 (old workers still draining after the graceful reload) |
+| Untrusted CA is rejected | [E-untrusted-error.png](B-https-lb/E-untrusted-error.png) | before trust: `curl: (60) SSL certificate problem: unable to get local issuer certificate` |
+| Clients trust the CA | [E-trust-vms.png](B-https-lb/E-trust-vms.png) · [E-mac-curl-verified.png](B-https-lb/E-mac-curl-verified.png) | `update-ca-certificates`: `1 added` on all four VMs; Mac System keychain + Mac curl `verify ok` |
+| **B1** `curl -v`, no `-k` | [E-B1-curl-v.txt](B-https-lb/E-B1-curl-v.txt) · [E-B1-curl-v.png](B-https-lb/E-B1-curl-v.png) | TLS 1.3 handshake messages, `TLS_AES_256_GCM_SHA384 / X25519 / RSASSA-PSS`, ALPN `h2`, SAN match, `SSL certificate verify ok`, `HTTP/2 200` |
+| **B2** 6 HTTPS responses | [E-B2-lb-6x-https.txt](B-https-lb/E-B2-lb-6x-https.txt) · [E-B2-lb-6x-https.png](B-https-lb/E-B2-lb-6x-https.png) | `x-backend`: B, A, B, A, B, A |
+| **B3** nginx upstream + server blocks | [E-B3-nginx-conf.txt](B-https-lb/E-B3-nginx-conf.txt) · [E-B3-nginx-conf-and-log.png](B-https-lb/E-B3-nginx-conf-and-log.png) | upstream pool, port-80 redirect server, port-443 TLS server with `proxy_pass` |
+| Redirect + versions | [E-http-redirect.txt](B-https-lb/E-http-redirect.txt) · [E-redirect-versions.png](B-https-lb/E-redirect-versions.png) | `301` → `https://…`; HTTP/1.1 and HTTP/2 both `200`; TLS 1.2 also works |
+| Edge log | [E-access-log-https.txt](B-https-lb/E-access-log-https.txt) | `HTTP/2.0` vs `HTTP/1.1`, `tls=TLSv1.3/TLS_AES_256_GCM_SHA384` vs `tls=TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384`, redirect `301 tls=-/- upstream=-` |
+| Browser | [E-safari-padlock-cert-chain.png](B-https-lb/E-safari-padlock-cert-chain.png) | Safari padlock, chain `teamvks Lab Root CA → app.teamvks.test`, "This certificate is valid" |
+
+Evidence for the remaining form sections is added as each task is built: C (Wireshark) and D (caching, failure demo).
