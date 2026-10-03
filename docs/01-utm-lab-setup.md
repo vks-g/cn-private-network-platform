@@ -121,6 +121,13 @@ sudo reboot
 
 When all four are done, start all four VMs together.
 
+**Shortcut once you've done one VM by hand:** `scripts/personalize-vm.sh` runs steps 5 and 6 for you. It skips the identity part automatically when the hostname already matches (so on `vm1-dns` it only sets the IP), and it still uses `netplan try`. Run it on the UTM console:
+
+```bash
+cd ~/cn && git pull && sudo bash scripts/personalize-vm.sh vm3-backend-a
+sudo reboot
+```
+
 ## 7. SSH shortcuts on the Mac
 
 From here on, work from Mac Terminal: copy/paste works and screenshots are clean.
