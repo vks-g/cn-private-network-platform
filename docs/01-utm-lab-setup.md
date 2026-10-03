@@ -14,7 +14,7 @@
 | Interface | the VM's virtual network card, `enp0s1` |
 | MAC address | layer-2 address of that card, used on the virtual switch |
 | Default gateway | where packets go when the destination is **not** in our subnet. Here that's the Mac, `192.168.64.1`, which NATs to the internet |
-| UTM Shared Network | a virtual switch on the Mac (`bridge100`). All VMs plug into it, so they are on the same LAN |
+| UTM Shared Network | a virtual switch on the Mac (`bridge100`, with one `vmenet` port per VM). All VMs plug into it, so they are on the same LAN |
 
 VM↔VM traffic never touches the gateway. Same subnet means the VMs find each other with ARP and talk directly through the switch.
 
@@ -146,6 +146,7 @@ Tip: open four Terminal tabs (or a 2×2 split) with `ssh vm1` … `ssh vm4`. Ren
 Run from the repo folder on the Mac:
 
 ```bash
+cd ~/Documents/Sem_5_Projects/CN/cn-private-network-platform   # tee writes relative paths: start in the repo
 mkdir -p evidence/phase1/A-lan-dns
 for h in vm1 vm2 vm3 vm4; do
   echo "===== $h"
@@ -177,28 +178,41 @@ ssh vm3 'hostname; ping -c 4 192.168.64.14'
 } | tee evidence/phase1/A-lan-dns/A5-ping-matrix.txt
 ```
 
-Then look at layer 2: `ssh vm1 ip neigh`. vm1 has now learned the MAC of every VM it pinged, through ARP.
+Then look at layer 2: `ssh vm1 ip neigh | tee evidence/phase1/A-lan-dns/A5-arp-table-vm1.txt`. vm1 has now learned the MAC of every VM it pinged, through ARP.
 
-## 10. Check the capture point now (saves pain in Task G)
+## 10. Find the right capture point (saves pain in Task G)
 
-We'll capture everything from the Mac on `bridge100`, so make sure it actually sees VM↔VM traffic:
+UTM's Shared Network is a **switch**, and the Mac has two kinds of interface on it:
 
-1. Run `ifconfig bridge100` on the Mac. It should show `inet 192.168.64.1`. It only exists while a VM is running.
-2. Open Wireshark → capture on **bridge100** → display filter `icmp || arp`.
-3. Run `ssh vm2 ping -c 3 192.168.64.13`.
-4. You should see ARP who-has/is-at and ICMP Echo request/reply between .12 and .13.
+| Interface on the Mac | What it is | What Wireshark sees there |
+| --- | --- | --- |
+| `bridge100` | the Mac's **own** port on the switch | broadcasts (e.g. ARP who-has) + traffic to or from the Mac only |
+| `vmenet0` … `vmenet3` | **one port per VM** (the VM's "cable") | everything that VM sends or receives |
 
-If nothing shows, tell me. The fallback is `tcpdump` inside a VM.
+A switch forwards a unicast frame only out of the destination's port, so VM↔VM traffic never reaches `bridge100`. That's the reason you can't sniff other people's traffic on a switched LAN; an old hub copied every frame to every port.
+
+1. Map ports to VMs: `ifconfig bridge100` → the **Address cache** lines read `<MAC> Vlan1 vmenetX`. Match the MACs with `A1-inventory.txt`. The numbers follow VM start order, so check again after restarting VMs.
+2. Wireshark → capture on **vm2's `vmenet` port** → display filter `arp || icmp`.
+3. Flush vm2's ARP cache so ARP has to run again, then ping vm3:
+   ```bash
+   ssh -t vm2 'sudo ip neigh flush dev enp0s1 && ping -c 3 192.168.64.13'
+   ```
+4. Expect the ARP request (broadcast), vm3's ARP reply "is at 7a:14:…" (unicast), then 3 ICMP echo request/reply pairs. Expand one ICMP packet: Ethernet II → IPv4 → ICMP.
+
+Try step 3 again while capturing on `bridge100`: only the broadcast ARP request shows up. That screenshot is the proof that the virtual network behaves like a switch.
 
 ## 📸 Screenshots for this task (save to `evidence/phase1/_inbox/`)
 
 | File name (we'll rename together) | What it shows |
 | --- | --- |
-| `A1-utm-four-vms.png` | UTM main window with all four VMs running |
-| `A1-vm-network-shared.png` | one VM's Network settings: Shared Network + its MAC |
-| `A1-terminal-inventory.png` | the four Terminal tabs/split, each showing `hostname; ip -br addr` |
+| `A1-utm-network-vm1..4.png` | each VM's Network settings in UTM: Shared Network + its own MAC |
+| `A1-four-vms-terminal.png` | the 2×2 terminal split, each pane showing `hostname; ip -br addr` |
+| `A1-inventory-terminal.png` | the step 8 inventory output |
 | `A5-ping-matrix.png` | the ping matrix output (0% packet loss on all six) |
-| `A-wireshark-arp-icmp.png` | the step 10 capture: ARP + ICMP between two VMs |
+| `A5-arp-table-vm1.png` | vm1's ARP cache after the pings |
+| `A-bridge100-switch-table.png` | `ifconfig bridge100`: member ports + MAC address table |
+| `A-wireshark-bridge100-broadcast-only.png` | step 10 on `bridge100`: only the broadcast ARP request |
+| `A-wireshark-vmenet0-arp-icmp.png` | step 10 on vm2's port: full ARP + ICMP exchange, one packet expanded |
 
 Cmd+Shift+4, then Space, captures one window. Cmd+Shift+5 → Options → Save to lets you pick `_inbox` once.
 
@@ -210,6 +224,7 @@ Cmd+Shift+4, then Space, captures one window. Cmd+Shift+5 → Options → Save t
 4. `ping` has no port number. Why? Which protocol does it use?
 5. What would break if two clones kept the same MAC address?
 6. Which real-world thing does UTM's Shared Network stand for in the brief's 4-Mac setup?
+7. Why does a capture on `bridge100` show the ARP *request* between two VMs but not the *reply*?
 
 ## Troubleshooting
 
@@ -221,3 +236,5 @@ Cmd+Shift+4, then Space, captures one window. Cmd+Shift+5 → Options → Save t
 | `ssh vm1` asks for a password | `ssh-copy-id` not done for that VM |
 | SSH warns "REMOTE HOST IDENTIFICATION HAS CHANGED" | old key in known_hosts: `ssh-keygen -R 192.168.64.1X` |
 | No `bridge100` on the Mac | no VM is running in Shared Network mode |
+| Wireshark shows no packets between two VMs | you are capturing on `bridge100`; capture on the VM's `vmenet` port (step 10) |
+| `tee: … No such file or directory` | you ran it outside the repo folder: `cd` into the repo first |
