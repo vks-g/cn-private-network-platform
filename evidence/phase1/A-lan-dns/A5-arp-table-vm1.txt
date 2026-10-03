@@ -1,0 +1,5 @@
+192.168.64.14 dev enp0s1 lladdr 92:b1:96:9b:dc:31 STALE 
+192.168.64.13 dev enp0s1 lladdr 7a:14:d5:23:b0:70 STALE 
+192.168.64.1 dev enp0s1 lladdr 82:a9:97:14:6d:64 DELAY 
+192.168.64.12 dev enp0s1 lladdr 6a:9b:d7:70:ed:9d STALE 
+fe80::80a9:97ff:fe14:6d64 dev enp0s1 lladdr 82:a9:97:14:6d:64 router STALE 

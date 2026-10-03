@@ -18,7 +18,7 @@ Submission type: **Type 3 – Virtual machines (UTM on Apple Silicon)**
 
 | Task | What | Status |
 | --- | --- | --- |
-| A | Private LAN between 4 VMs | ☐ |
+| A | Private LAN between 4 VMs | ✅ [evidence](evidence/phase1/README.md#a--private-lan-task-a--form-a1-a5) |
 | B | Private DNS (dnsmasq) for `teamvks.test` | ☐ |
 | C | Two REST backends (A on 3001, B on 3002) | ☐ |
 | D | nginx reverse proxy + round-robin load balancer | ☐ |
@@ -50,6 +50,8 @@ The full topology, request flow, protocol layer map and cloud equivalents are in
 ├── tls/             public CA / server certificates and the OpenSSL extension file
 └── evidence/phase1/ screenshots, terminal output and packet captures, by form section
 ```
+
+All Phase 1 evidence is indexed in [evidence/phase1/README.md](evidence/phase1/README.md), and the text for the submission form is in [evidence/phase1/form-answers.md](evidence/phase1/form-answers.md).
 
 
 ## Guides

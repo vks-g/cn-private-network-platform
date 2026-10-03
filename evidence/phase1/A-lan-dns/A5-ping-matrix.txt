@@ -1,0 +1,60 @@
+vm1-dns
+PING 192.168.64.12 (192.168.64.12) 56(84) bytes of data.
+64 bytes from 192.168.64.12: icmp_seq=1 ttl=64 time=0.446 ms
+64 bytes from 192.168.64.12: icmp_seq=2 ttl=64 time=0.667 ms
+64 bytes from 192.168.64.12: icmp_seq=3 ttl=64 time=1.17 ms
+64 bytes from 192.168.64.12: icmp_seq=4 ttl=64 time=1.50 ms
+
+--- 192.168.64.12 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3032ms
+rtt min/avg/max/mdev = 0.446/0.946/1.502/0.414 ms
+vm1-dns
+PING 192.168.64.13 (192.168.64.13) 56(84) bytes of data.
+64 bytes from 192.168.64.13: icmp_seq=1 ttl=64 time=0.536 ms
+64 bytes from 192.168.64.13: icmp_seq=2 ttl=64 time=1.26 ms
+64 bytes from 192.168.64.13: icmp_seq=3 ttl=64 time=1.52 ms
+64 bytes from 192.168.64.13: icmp_seq=4 ttl=64 time=1.28 ms
+
+--- 192.168.64.13 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3034ms
+rtt min/avg/max/mdev = 0.536/1.147/1.521/0.368 ms
+vm1-dns
+PING 192.168.64.14 (192.168.64.14) 56(84) bytes of data.
+64 bytes from 192.168.64.14: icmp_seq=1 ttl=64 time=0.512 ms
+64 bytes from 192.168.64.14: icmp_seq=2 ttl=64 time=1.78 ms
+64 bytes from 192.168.64.14: icmp_seq=3 ttl=64 time=1.35 ms
+64 bytes from 192.168.64.14: icmp_seq=4 ttl=64 time=1.15 ms
+
+--- 192.168.64.14 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3063ms
+rtt min/avg/max/mdev = 0.512/1.197/1.781/0.457 ms
+vm2-edge
+PING 192.168.64.13 (192.168.64.13) 56(84) bytes of data.
+64 bytes from 192.168.64.13: icmp_seq=1 ttl=64 time=1.25 ms
+64 bytes from 192.168.64.13: icmp_seq=2 ttl=64 time=1.40 ms
+64 bytes from 192.168.64.13: icmp_seq=3 ttl=64 time=1.80 ms
+64 bytes from 192.168.64.13: icmp_seq=4 ttl=64 time=1.41 ms
+
+--- 192.168.64.13 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3009ms
+rtt min/avg/max/mdev = 1.250/1.463/1.796/0.202 ms
+vm2-edge
+PING 192.168.64.14 (192.168.64.14) 56(84) bytes of data.
+64 bytes from 192.168.64.14: icmp_seq=1 ttl=64 time=0.423 ms
+64 bytes from 192.168.64.14: icmp_seq=2 ttl=64 time=1.16 ms
+64 bytes from 192.168.64.14: icmp_seq=3 ttl=64 time=1.62 ms
+64 bytes from 192.168.64.14: icmp_seq=4 ttl=64 time=1.46 ms
+
+--- 192.168.64.14 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3040ms
+rtt min/avg/max/mdev = 0.423/1.167/1.620/0.459 ms
+vm3-backend-a
+PING 192.168.64.14 (192.168.64.14) 56(84) bytes of data.
+64 bytes from 192.168.64.14: icmp_seq=1 ttl=64 time=0.353 ms
+64 bytes from 192.168.64.14: icmp_seq=2 ttl=64 time=1.89 ms
+64 bytes from 192.168.64.14: icmp_seq=3 ttl=64 time=1.26 ms
+64 bytes from 192.168.64.14: icmp_seq=4 ttl=64 time=1.40 ms
+
+--- 192.168.64.14 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3041ms
+rtt min/avg/max/mdev = 0.353/1.225/1.887/0.554 ms

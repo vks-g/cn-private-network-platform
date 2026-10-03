@@ -1,0 +1,20 @@
+===== vm1
+vm1-dns
+enp0s1           UP             192.168.64.11/24 fd40:3246:35dd:e816:cc6c:90ff:fea5:665a/64 fe80::cc6c:90ff:fea5:665a/64 
+enp0s1           UP             ce:6c:90:a5:66:5a <BROADCAST,MULTICAST,UP,LOWER_UP> 
+default via 192.168.64.1 dev enp0s1 proto static 
+===== vm2
+vm2-edge
+enp0s1           UP             192.168.64.12/24 fd40:3246:35dd:e816:689b:d7ff:fe70:ed9d/64 fe80::689b:d7ff:fe70:ed9d/64 
+enp0s1           UP             6a:9b:d7:70:ed:9d <BROADCAST,MULTICAST,UP,LOWER_UP> 
+default via 192.168.64.1 dev enp0s1 proto static 
+===== vm3
+vm3-backend-a
+enp0s1           UP             192.168.64.13/24 fd40:3246:35dd:e816:7814:d5ff:fe23:b070/64 fe80::7814:d5ff:fe23:b070/64 
+enp0s1           UP             7a:14:d5:23:b0:70 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+default via 192.168.64.1 dev enp0s1 proto static 
+===== vm4
+vm4-backend-b
+enp0s1           UP             192.168.64.14/24 fd40:3246:35dd:e816:90b1:96ff:fe9b:dc31/64 fe80::90b1:96ff:fe9b:dc31/64 
+enp0s1           UP             92:b1:96:9b:dc:31 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+default via 192.168.64.1 dev enp0s1 proto static 
