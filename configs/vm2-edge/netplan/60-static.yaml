@@ -14,6 +14,7 @@ network:
         - to: default           # anything outside 192.168.64.0/24 ...
           via: 192.168.64.1     # ... goes to the Mac (UTM gateway + NAT)
       nameservers:
-        # Task A: the Mac's DNS forwarder, so apt works.
-        # Task B switches this to our own DNS server, 192.168.64.11.
-        addresses: [192.168.64.1]
+        # Task B: every VM (vm1 included) asks our own DNS server on vm1.
+        # dnsmasq answers *.teamvks.test and forwards other names to 192.168.64.1.
+        # (Task A used 192.168.64.1 directly, before dnsmasq existed.)
+        addresses: [192.168.64.11]
