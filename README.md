@@ -83,5 +83,6 @@ Each guide covers the concept, the commands, the expected output, the screenshot
 1. [UTM lab setup – private LAN (Task A)](docs/01-utm-lab-setup.md)
 2. [Private DNS with dnsmasq (Task B)](docs/02-dns.md)
 3. [Two REST backends (Task C)](docs/03-backends.md)
+4. [Edge reverse proxy and load balancer (Task D)](docs/04-edge-load-balancer.md)
 
 More guides are added as each task is built.
