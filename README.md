@@ -86,5 +86,6 @@ Each guide covers the concept, the commands, the expected output, the screenshot
 4. [Edge reverse proxy and load balancer (Task D)](docs/04-edge-load-balancer.md)
 5. [HTTPS with our own certificate authority (Task E)](docs/05-tls.md)
 6. [HTTP caching and the edge cache (Task F)](docs/06-caching.md)
+7. [Wireshark: DNS → TCP → TLS → HTTP on the wire (Task G)](docs/07-wireshark.md)
 
 More guides are added as each task is built.
