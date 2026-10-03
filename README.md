@@ -54,11 +54,34 @@ The full topology, request flow, protocol layer map and cloud equivalents are in
 All Phase 1 evidence is indexed in [evidence/phase1/README.md](evidence/phase1/README.md), and the text for the submission form is in [evidence/phase1/form-answers.md](evidence/phase1/form-answers.md).
 
 
+## How to run the backends
+
+Backend A runs on `vm3-backend-a` (`192.168.64.13:3001`) and Backend B on `vm4-backend-b` (`192.168.64.14:3002`). Both run the same Python program, [backend/server.py](backend/server.py), which needs only the standard library.
+
+```bash
+# quick manual run (Ctrl+C to stop)
+python3 backend/server.py --id A --port 3001      # on vm3
+python3 backend/server.py --id B --port 3002      # on vm4
+
+# as a systemd service (what the lab uses), on each backend VM
+sudo install -D -m 644 ~/cn/backend/server.py /opt/teamvks/backend/server.py
+sudo install -m 644 ~/cn/backend/teamvks-backend.service /etc/systemd/system/
+sudo install -m 644 ~/cn/configs/$(hostname)/teamvks-backend.env /etc/default/teamvks-backend
+sudo systemctl daemon-reload && sudo systemctl enable --now teamvks-backend
+
+# check from the edge (vm2)
+curl -i http://192.168.64.13:3001/api/status      # X-Backend: A
+curl -i http://192.168.64.14:3002/api/status      # X-Backend: B
+```
+
+Endpoints: `GET /` (HTML status page), `GET /api/status` (`{"backend": "A", "status": "ok", ...}`). Every response carries `X-Backend: A|B`. Details: [backend/README.md](backend/README.md).
+
 ## Guides
 
 Each guide covers the concept, the commands, the expected output, the screenshots to take and viva practice questions.
 
 1. [UTM lab setup – private LAN (Task A)](docs/01-utm-lab-setup.md)
 2. [Private DNS with dnsmasq (Task B)](docs/02-dns.md)
+3. [Two REST backends (Task C)](docs/03-backends.md)
 
 More guides are added as each task is built.
