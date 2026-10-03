@@ -86,13 +86,15 @@ What's new in the config:
 ```bash
 mkdir -p ~/evidence
 curl -sI https://app.teamvks.test/api/info | tee ~/evidence/F-D1-headers.txt
-for i in 1 2 3 4 5; do curl -sI https://app.teamvks.test/api/info | grep -iE '^x-backend|^x-cache-status' | paste -sd' ' -; done | tee ~/evidence/F-edge-hits.txt
+for i in 1 2 3 4 5; do curl -sI https://app.teamvks.test/api/info | tr -d '\r' | grep -iE '^x-backend|^x-cache-status' | paste -sd' ' -; done | tee ~/evidence/F-edge-hits.txt
 ```
 
 **Expect:**
 
 - First: `HTTP/2 200`, `cache-control: public, max-age=60`, `etag`, `last-modified`, `x-backend: A` (or B), **`x-cache-status: MISS`**: the edge had no copy, so it fetched one.
 - Then five lines, all **`HIT`** and all with the **same** `x-backend`. The edge answered from its copy and no backend was contacted, so round-robin doesn't even happen.
+
+`tr -d '\r'` matters: every HTTP header line ends in **CR LF** (`\r\n`). Without removing the `\r`, `paste` glues the lines together and the terminal's carriage return makes the second header overwrite the first on screen.
 
 ## 5. A 304 through the edge (vm4 pane)
 
@@ -198,4 +200,5 @@ The form asks for 2–4 sentences on `max-age`, `ETag` and `304`. Don't copy thi
 | always `MISS`, never `HIT` | the backend response has no `Cache-Control: max-age` (old `server.py` on one backend?): `curl -sI http://192.168.64.13:3001/api/info` and `…14:3002…` |
 | conditional request returns `200`, not `304` | the ETag wasn't copied exactly (quotes included): `echo "$ETAG"` must show `"…"` with the quotes |
 | `nginx -t`: `mkdir() "/var/cache/nginx-teamvks" failed` | run `nginx -t` with `sudo` |
+| the HIT loop shows ` x-cache-status: HIT` without `x-backend` | the `\r` at the end of each header line: keep `tr -d '\r'` in the pipeline |
 | `sleep 61` shows `EXPIRED` instead of `REVALIDATED` | the backend answered `200` instead of `304`: check that both backends run the new code (same ETag) |
