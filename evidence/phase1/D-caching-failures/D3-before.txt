@@ -1,0 +1,12 @@
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+
+{"backend": "A", "status": "ok", "host": "vm3-backend-a"}
+
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+

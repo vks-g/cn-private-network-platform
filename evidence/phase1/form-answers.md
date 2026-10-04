@@ -341,6 +341,12 @@ For comparison, the TLS 1.3 connection (frames 45–70) shows only ClientHello a
 
 Sources: [C1-dns.txt](C-wireshark/C1-dns.txt) · [C2-tcp-handshake.txt](C-wireshark/C2-tcp-handshake.txt) · [C3-tls-handshake.txt](C-wireshark/C3-tls-handshake.txt) · [C-edge-to-backend-http.txt](C-wireshark/C-edge-to-backend-http.txt)
 
-## D3
+## D3 – Failure demonstration (Option A: one backend down)
 
-_Filled in after the failure demo._
+1. **Option:** A. Stopped Backend A with `sudo systemctl stop teamvks-backend` on vm3-backend-a (192.168.64.13:3001); `systemctl is-active` → `inactive`.
+2. **Before:** 6 requests to `https://app.teamvks.test/api/status` from vm4 returned A, B, A, B, A, B (round-robin).
+3. **After the failure:** all 6 requests still returned **HTTP 200**, every one from **Backend B**. nginx's connection to 192.168.64.13:3001 was refused, so it retried the request on B (`proxy_next_upstream`) and then skipped A for `fail_timeout=10s` (passive health check).
+4. **Layer:** application layer (layer 7) on vm3: the backend process was stopped. vm3 itself, its IP, DNS (vm1) and the TLS edge (vm2) were all still working, so name resolution, TCP to the edge and TLS were unaffected; only the TCP connection from the edge to port 3001 was refused.
+5. **Restored:** `sudo systemctl start teamvks-backend` → `active`; after the 10 s `fail_timeout` the next requests returned B, B, A, B, A, B: Backend A is back in the rotation.
+
+Sources: [D3-before.txt](D-caching-failures/D3-before.txt) · [D3-during.txt](D-caching-failures/D3-during.txt) · [D3-after.txt](D-caching-failures/D3-after.txt) · [D3-backend-a-down-and-restore.png](D-caching-failures/D3-backend-a-down-and-restore.png)

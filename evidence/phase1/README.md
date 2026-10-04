@@ -118,4 +118,15 @@ Folder: [`C-wireshark/`](C-wireshark/). Capture: [`phase1-dns-tcp-tls.pcapng`](C
 | TLS 1.3 comparison | [G-tls13-vs-tls12.png](C-wireshark/G-tls13-vs-tls12.png) | ServerHello `supported_versions: TLS 1.3`, `TLS_AES_256_GCM_SHA384`; no Certificate message visible (encrypted) |
 | TLS termination | [G-edge-plaintext-backend.png](C-wireshark/G-edge-plaintext-backend.png) · [C-edge-to-backend-http.txt](C-wireshark/C-edge-to-backend-http.txt) | the same moment, edge → Backend B on port 3002: plain `GET /api/status HTTP/1.1` with `X-Forwarded-For: 192.168.64.14`, `X-Forwarded-Proto: https`, JSON reply |
 
-Evidence for the remaining form item (D3 failure demo) is added next.
+## D3 – Failure demonstration: Backend A down (form D3, Option A)
+
+Folder: [`D-caching-failures/`](D-caching-failures/).
+
+| Stage | File | What it shows |
+| --- | --- | --- |
+| Before | [D3-before.txt](D-caching-failures/D3-before.txt) | 6 HTTPS requests from vm4: A, B, A, B, A, B |
+| Failure | [D3-during.txt](D-caching-failures/D3-during.txt) | `systemctl stop teamvks-backend` on vm3 → `inactive`; 6 requests all `200` from **B** |
+| Restored | [D3-after.txt](D-caching-failures/D3-after.txt) | `systemctl start` → `active`; after nginx's 10 s `fail_timeout`, A and B alternate again |
+| All stages | [D3-backend-a-down-and-restore.png](D-caching-failures/D3-backend-a-down-and-restore.png) | vm3 and vm4 panes side by side |
+
+A preview of the same failure over plain HTTP, with nginx's retry visible in the access log (`upstream_status=502, 200`), is in [D-one-backend-down-and-restore.png](B-https-lb/D-one-backend-down-and-restore.png).
