@@ -33,7 +33,29 @@ Mac (CA)                                   vm2 (edge)
 5. trust teamvks-ca.crt on every client (VMs + Mac)
 ```
 
-The exact commands with explanations are in [docs/05-tls.md](../docs/05-tls.md).
+The commands, in order:
+
+```bash
+# 1. Mac (in tls/): the CA
+openssl genrsa -out private/teamvks-ca.key 2048
+openssl req -x509 -new -key private/teamvks-ca.key -sha256 -days 1825 -config ca.cnf -out teamvks-ca.crt
+
+# 2. vm2: the edge's own key and a signing request
+openssl req -new -newkey rsa:2048 -nodes -keyout teamvks-server.key -out teamvks-server.csr \
+  -subj "/CN=app.teamvks.test/O=teamvks CN Project"
+
+# 3. Mac: sign the CSR with the CA
+openssl x509 -req -in private/teamvks-server.csr -CA teamvks-ca.crt -CAkey private/teamvks-ca.key \
+  -CAcreateserial -days 397 -sha256 -extfile server.ext -out teamvks-server.crt
+
+# 4. vm2: install for nginx (key mode 600, root only)
+sudo install -m 644 teamvks-server.crt /etc/nginx/tls/teamvks-server.crt
+sudo install -m 600 teamvks-server.key /etc/nginx/tls/teamvks-server.key
+
+# 5. every client: trust the CA
+sudo install -m 644 teamvks-ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates     # Ubuntu VMs
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain tls/teamvks-ca.crt   # macOS
+```
 
 ## Inspect the certificates
 

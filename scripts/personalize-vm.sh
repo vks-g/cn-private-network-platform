@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Give a cloned lab VM its own identity and a static IP (Task A, steps 6.2-6.4).
+# Give a cloned lab VM its own identity and a static IP (Task A).
 #
 # Run it on the UTM console, not over SSH (the IP address changes):
 #   cd ~/cn && git pull && sudo bash scripts/personalize-vm.sh <vm-name>

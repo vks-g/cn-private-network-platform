@@ -52,5 +52,3 @@ systemctl status teamvks-backend --no-pager
 - [`teamvks-backend.service`](teamvks-backend.service) reads `BACKEND_ID` and `BACKEND_PORT` from `/etc/default/teamvks-backend`: [A](../configs/vm3-backend-a/teamvks-backend.env) · [B](../configs/vm4-backend-b/teamvks-backend.env).
 - It runs as an unprivileged throwaway user (`DynamicUser=yes`) and restarts after a crash, but stays down after `systemctl stop`.
 - Logs: `journalctl -u teamvks-backend -f`.
-
-The step-by-step version with explanations is [docs/03-backends.md](../docs/03-backends.md).

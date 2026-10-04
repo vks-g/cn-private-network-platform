@@ -2,7 +2,7 @@
 # Install:  sudo install -m 644 ~/cn/backend/teamvks-backend.service /etc/systemd/system/
 [Unit]
 Description=teamvks REST backend (Task C)
-Documentation=https://github.com/vks-g/cn-private-network-platform/blob/main/docs/03-backends.md
+Documentation=https://github.com/vks-g/cn-private-network-platform/blob/main/backend/README.md
 After=network.target
 
 [Service]
