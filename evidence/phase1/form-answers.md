@@ -219,10 +219,6 @@ Source: [B-https-lb/E-B2-lb-6x-https.txt](B-https-lb/E-B2-lb-6x-https.txt). Roun
 ## B3 – nginx upstream and server blocks
 
 ```nginx
-log_format teamvks '$remote_addr:$remote_port "$request" $status '
-                   'tls=$ssl_protocol/$ssl_cipher '
-                   'upstream=$upstream_addr upstream_status=$upstream_status '
-                   'upstream_time=$upstream_response_time';
 upstream teamvks_backends {
     zone teamvks_backends 64k;
     server 192.168.64.13:3001 max_fails=1 fail_timeout=10s;   # Backend A (vm3)
@@ -241,25 +237,31 @@ server {
     ssl_certificate_key /etc/nginx/tls/teamvks-server.key;
     ssl_protocols       TLSv1.2 TLSv1.3;
     access_log /var/log/nginx/teamvks-access.log teamvks;
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout     2s;
+    proxy_next_upstream       error timeout http_502 http_503 http_504;
+    proxy_next_upstream_tries 2;
     location / {
         proxy_pass http://teamvks_backends;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout     2s;
-        proxy_next_upstream       error timeout http_502 http_503 http_504;
-        proxy_next_upstream_tries 2;
+    }
+    location = /api/info {
+        proxy_pass  http://teamvks_backends;
+        proxy_cache teamvks_cache;
+        proxy_cache_revalidate on;
+        add_header X-Cache-Status $upstream_cache_status always;
     }
 }
 ```
 
-Source: `/etc/nginx/sites-available/teamvks` on vm2-edge (comments stripped). Full commented file: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf)
+Source: `/etc/nginx/sites-available/teamvks` on vm2-edge, comments stripped (current version, including the Task F edge cache for `/api/info`). Full commented file: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf). The version captured during Task E, before the cache was added: [E-B3-nginx-conf.txt](B-https-lb/E-B3-nginx-conf.txt).
 
 ## D1 – Response headers of the cache-enabled endpoint (`/api/info`)
 
-Caching is implemented on **`GET /api/info`** (backends set the headers; the edge vm2 also caches it). `/` and `/api/status` are deliberately `no-store`.
+Caching is implemented on **`GET /api/info`** (the form allows a different endpoint: "paste that URL's output and note the URL"). The backends set the headers and the edge (vm2) also caches it. `/` and `/api/status` are deliberately `Cache-Control: no-store`, so the load-balancing proof always reaches a live backend.
 
 First request (edge had no copy):
 
@@ -305,7 +307,7 @@ Sources: [F-D1-headers.txt](D-caching-failures/F-D1-headers.txt) · [F-D1-304.tx
 
 ## D2 – Explain `max-age`, `ETag` and `304` (2–4 sentences, **write this yourself**)
 
-_Write it in your own words from what you observed. Points to cover: what `max-age=60` let the edge do (5× HIT, no backend contacted); what the ETag is and why A and B share it (the copy fetched from B was confirmed by A); what the 304 saved (the body) and what it didn't (the round trip)._
+_Write it in your own words (the form says so). Answer the form's three questions from what you saw: (1) what `public, max-age=60` means, (2) what the client/edge does with it (reuses the copy for 60 s: 5× HIT, no backend contacted), (3) what happens after 60 s (copy is stale → conditional request with the ETag → `304 Not Modified` → copy is fresh again: your `REVALIDATED`). Bonus: what a 304 means and when it happens._
 
 ## C1 – DNS query and response (Wireshark)
 
@@ -335,7 +337,7 @@ Same connection (`tcp.stream eq 0 && tls`), TLS 1.2 so the certificate is visibl
 2. **ServerHello + Certificate + ServerKeyExchange + ServerHelloDone (frame 20):** server picks **TLS 1.2, `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`**, ALPN `h2`. Certificate: subject `CN=app.teamvks.test`, issuer `CN=teamvks Lab Root CA`, valid 2026-10-03 → 2027-11-04, SAN `app.teamvks.test`, `api.teamvks.test`. Key exchange: ECDHE on **x25519**, signed with `rsa_pss_rsae_sha256`.
 3. **ClientKeyExchange + ChangeCipherSpec + Encrypted Handshake Message (frame 22):** client's ECDHE public value, then it switches to encryption (Finished).
 4. **ChangeCipherSpec + Encrypted Handshake Message (frame 23):** server switches too.
-5. **Application Data (frames 24–30):** the HTTP/2 request and response, encrypted (AES-256-GCM); paths, headers and JSON are not readable.
+5. **Application Data (frames 24–30):** the HTTP/2 request and response, encrypted with AES-256-GCM. The HTTP headers and body are **not readable** because they're encrypted with session keys that client and edge derived from the ECDHE exchange; those keys never cross the wire, and Wireshark doesn't have them (not even the server's private key would help: forward secrecy).
 
 For comparison, the TLS 1.3 connection (frames 45–70) shows only ClientHello and ServerHello (`TLS_AES_256_GCM_SHA384`, `supported_versions: TLS 1.3`); its certificate travels inside encrypted records. The edge→backend leg in the same capture (frames 57–67, port 3002) is plain HTTP with `X-Forwarded-For: 192.168.64.14`: TLS terminates at the edge.
 
