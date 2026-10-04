@@ -45,7 +45,7 @@ flowchart TB
 | VM4 | Mac 4 – Backend B + test client | `vm4-backend-b` | `enp0s1` | 192.168.64.14/24 | 192.168.64.1 | `92:b1:96:9b:dc:31` | 3002/tcp |
 | Host | UTM host, capture point, browser client | macOS | `bridge100` | 192.168.64.1/24 | – | `82:a9:97:14:6d:64` | – |
 
-Values are taken from real output in [`evidence/phase1/A-lan-dns/A1-inventory.txt`](../evidence/phase1/A-lan-dns/A1-inventory.txt). The MACs are random "locally administered" addresses set in UTM, one per VM.
+Values are taken from real output in [`A1-inventory.txt`](../evidence/phase1/all-evidence/A-lan-dns/A1-inventory.txt). The MACs are random "locally administered" addresses set in UTM, one per VM.
 
 **Capture points.** UTM's Shared Network behaves like a real switch. `bridge100` is the Mac's own port on it, so Wireshark there only sees broadcasts and traffic to or from the Mac. Each VM has its own switch port on the Mac (`vmenet0`–`vmenet3`, assigned in start order). To see a VM's traffic, capture on its `vmenet` port; `ifconfig bridge100` → *Address cache* shows which MAC sits on which port.
 

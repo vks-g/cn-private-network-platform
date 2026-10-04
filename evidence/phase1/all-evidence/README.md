@@ -1,14 +1,12 @@
-# Phase 1 evidence
+# Phase 1 – all evidence
 
-Every file here maps to a form question or a task in the project brief.
+Every screenshot, terminal output and packet capture from Phase 1, grouped by task. A short selection of the most important items is in [`../key-evidence/`](../key-evidence/).
 
 - `.txt` files are raw terminal output, saved with `tee` while the commands ran.
 - `.png` files are screenshots of the same runs.
-- Captures were taken on 3 October 2026 on the lab described in [docs/architecture.md](../../docs/architecture.md).
+- Captures were taken on 3–4 October 2026 on the lab described in [docs/architecture.md](../../../docs/architecture.md).
 
-Ready-to-paste form text is in [form-answers.md](form-answers.md).
-
-## A – Private LAN (Task A · form A1, A5)
+## Task A – Private LAN (form A1, A5)
 
 Folder: [`A-lan-dns/`](A-lan-dns/)
 
@@ -23,7 +21,7 @@ Folder: [`A-lan-dns/`](A-lan-dns/)
 | Capture point | [A-wireshark-bridge100-broadcast-only.png](A-lan-dns/A-wireshark-bridge100-broadcast-only.png) | on `bridge100` only the broadcast ARP request is visible; unicast VM↔VM frames never reach the Mac's port |
 | ARP + ICMP on the wire | [A-wireshark-vmenet0-arp-icmp.png](A-lan-dns/A-wireshark-vmenet0-arp-icmp.png) | on vm2's port: ARP request (broadcast), ARP reply (unicast), 3 ICMP echo request/reply pairs, Ethernet II → IPv4 → ICMP expanded |
 
-## A – Private DNS (Task B · form A2, A3, A4)
+## Task B – Private DNS (form A2, A3, A4)
 
 Folder: [`A-lan-dns/`](A-lan-dns/). Server: dnsmasq on vm1-dns (`192.168.64.11`). Records: `app.teamvks.test`, `api.teamvks.test` → `192.168.64.12` (the edge).
 
@@ -31,7 +29,7 @@ Folder: [`A-lan-dns/`](A-lan-dns/). Server: dnsmasq on vm1-dns (`192.168.64.11`)
 | --- | --- | --- |
 | Upstream check | [A2-upstream-check.png](A-lan-dns/A2-upstream-check.png) | the Mac's forwarder (`192.168.64.1`) answers before dnsmasq relies on it |
 | Port 53 conflict | [A2-dnsmasq-port53-before.png](A-lan-dns/A2-dnsmasq-port53-before.png) | fresh install: dnsmasq fails with "Address already in use"; `systemd-resolve` owns `127.0.0.53:53` |
-| A2 dnsmasq configuration | [A2-dnsmasq-conf.txt](A-lan-dns/A2-dnsmasq-conf.txt) · [full commented file](../../configs/vm1-dns/dnsmasq.d/teamvks.conf) | `interface=`, `listen-address=192.168.64.11`, `bind-dynamic`, `local=`, both `address=` lines, forwarding |
+| A2 dnsmasq configuration | [A2-dnsmasq-conf.txt](A-lan-dns/A2-dnsmasq-conf.txt) · [full commented file](../../../configs/vm1-dns/dnsmasq.d/teamvks.conf) | `interface=`, `listen-address=192.168.64.11`, `bind-dynamic`, `local=`, both `address=` lines, forwarding |
 | A2 deploy | [A2-dnsmasq-deploy.png](A-lan-dns/A2-dnsmasq-deploy.png) | `dnsmasq --test` OK, service `active` + `enabled` |
 | A2 listening sockets | [A2-dnsmasq-port53-after.png](A-lan-dns/A2-dnsmasq-port53-after.png) | dnsmasq on `192.168.64.11:53` next to systemd-resolved on `127.0.0.53:53` |
 | A2 query log | [A2-dnsmasq-query-log.txt](A-lan-dns/A2-dnsmasq-query-log.txt) | `query[A] app.teamvks.test from 192.168.64.14` → `config … is 192.168.64.12`; other names `forwarded … to 192.168.64.1` and `cached` |
@@ -41,9 +39,9 @@ Folder: [`A-lan-dns/`](A-lan-dns/). Server: dnsmasq on vm1-dns (`192.168.64.11`)
 | Third client: the Mac | [A3-mac-resolver.png](A-lan-dns/A3-mac-resolver.png) | `/etc/resolver/teamvks.test` sends only `*.teamvks.test` to `192.168.64.11`; the system resolver returns `192.168.64.12`; `ping app.teamvks.test` works by name |
 | A4 public DNS | [A4-dig-8.8.8.8-nxdomain.txt](A-lan-dns/A4-dig-8.8.8.8-nxdomain.txt) | `status: NXDOMAIN` from 8.8.8.8, root-zone SOA in AUTHORITY, `ad` (DNSSEC-validated non-existence) |
 
-## B – Backend services (Task C)
+## Task C – Backend services
 
-Folder: [`B-https-lb/`](B-https-lb/). Code: [backend/server.py](../../backend/server.py), run by [teamvks-backend.service](../../backend/teamvks-backend.service). Backend A = vm3 `192.168.64.13:3001`, Backend B = vm4 `192.168.64.14:3002`.
+Folder: [`B-https-lb/`](B-https-lb/). Code: [backend/server.py](../../../backend/server.py), run by [teamvks-backend.service](../../../backend/teamvks-backend.service). Backend A = vm3 `192.168.64.13:3001`, Backend B = vm4 `192.168.64.14:3002`.
 
 | Brief item | File | What it shows |
 | --- | --- | --- |
@@ -54,9 +52,9 @@ Folder: [`B-https-lb/`](B-https-lb/). Code: [backend/server.py](../../backend/se
 | Service details + request log | [C-vm3-backend-a-service.txt](B-https-lb/C-vm3-backend-a-service.txt) · [C-vm4-backend-b-service.txt](B-https-lb/C-vm4-backend-b-service.txt) | `systemctl status`, listening socket, journal line for the edge's request |
 | Starts at boot | [C-reboot-survives.png](B-https-lb/C-reboot-survives.png) | after `sudo reboot` of vm3: up 2 min, service active since the new boot, vm2's curl answered without manual start |
 
-## B – Edge reverse proxy and load balancing (Task D, HTTP)
+## Task D – Reverse proxy and load balancing over HTTP
 
-Folder: [`B-https-lb/`](B-https-lb/). Config: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf) on vm2-edge (`192.168.64.12:80`). This is the plain-HTTP stage; the HTTPS versions for form B1–B3 follow in Task E.
+Folder: [`B-https-lb/`](B-https-lb/). Config: [configs/vm2-edge/nginx/teamvks.conf](../../../configs/vm2-edge/nginx/teamvks.conf) on vm2-edge (`192.168.64.12:80`). This is the plain-HTTP stage; the HTTPS versions for form B1–B3 follow in Task E.
 
 | Brief item | File | What it shows |
 | --- | --- | --- |
@@ -69,9 +67,9 @@ Folder: [`B-https-lb/`](B-https-lb/). Config: [configs/vm2-edge/nginx/teamvks.co
 | Raw outputs | [D-lb-6x-http.txt](B-https-lb/D-lb-6x-http.txt) · [D-access-log.txt](B-https-lb/D-access-log.txt) · [D-backend-a-log-via-edge.txt](B-https-lb/D-backend-a-log-via-edge.txt) · [D-backend-page-via-edge.html](B-https-lb/D-backend-page-via-edge.html) | the same runs as saved text: 6 alternating responses, 12 access-log lines, backend log with `peer=192.168.64.12 xff=192.168.64.14`, backend page as served through the edge |
 | One backend down (preview of D3) | [D-one-backend-down-and-restore.png](B-https-lb/D-one-backend-down-and-restore.png) | A stopped → 6× `200` from B; log line `upstream=192.168.64.13:3001, 192.168.64.14:3002 upstream_status=502, 200` (refused, retried on B in the same request); after restart A rejoins once `fail_timeout` (10 s) expires |
 
-## B – HTTPS with a local CA (Task E · form B1, B2, B3)
+## Task E – HTTPS with a local CA (form B1, B2, B3)
 
-Folder: [`B-https-lb/`](B-https-lb/). TLS files: [tls/](../../tls/) (CA config, extension file, the two **public** certificates). Edge config: [configs/vm2-edge/nginx/teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf).
+Folder: [`B-https-lb/`](B-https-lb/). TLS files: [tls/](../../../tls/) (CA config, extension file, the two **public** certificates). Edge config: [configs/vm2-edge/nginx/teamvks.conf](../../../configs/vm2-edge/nginx/teamvks.conf).
 
 | Form / brief item | File | What it shows |
 | --- | --- | --- |
@@ -88,9 +86,9 @@ Folder: [`B-https-lb/`](B-https-lb/). TLS files: [tls/](../../tls/) (CA config, 
 | Edge log | [E-access-log-https.txt](B-https-lb/E-access-log-https.txt) | `HTTP/2.0` vs `HTTP/1.1`, `tls=TLSv1.3/TLS_AES_256_GCM_SHA384` vs `tls=TLSv1.2/ECDHE-RSA-AES256-GCM-SHA384`, redirect `301 tls=-/- upstream=-` |
 | Browser | [E-safari-padlock-cert-chain.png](B-https-lb/E-safari-padlock-cert-chain.png) | Safari padlock, chain `teamvks Lab Root CA → app.teamvks.test`, "This certificate is valid" |
 
-## D – HTTP caching and the edge cache (Task F · form D1, D2)
+## Task F – HTTP caching and the edge cache (form D1, D2)
 
-Folder: [`D-caching-failures/`](D-caching-failures/). Cacheable endpoint: `/api/info` ([backend/server.py](../../backend/server.py)); edge cache: `location = /api/info` in [teamvks.conf](../../configs/vm2-edge/nginx/teamvks.conf).
+Folder: [`D-caching-failures/`](D-caching-failures/). Cacheable endpoint: `/api/info` ([backend/server.py](../../../backend/server.py)); edge cache: `location = /api/info` in [teamvks.conf](../../../configs/vm2-edge/nginx/teamvks.conf).
 
 | Form / brief item | File | What it shows |
 | --- | --- | --- |
@@ -104,7 +102,7 @@ Folder: [`D-caching-failures/`](D-caching-failures/). Cacheable endpoint: `/api/
 | Backends' view | [F-backend-logs.png](D-caching-failures/F-backend-logs.png) | only a handful of `/api/info` requests reached A and B; the edge's revalidation arrived at A as a `304` |
 | Live data not cached | [F-status-not-cached.png](D-caching-failures/F-status-not-cached.png) | `/api/status`: `cache-control: no-store`, no `x-cache-status`, A/B still alternating |
 
-## C – Wireshark: DNS → TCP → TLS → HTTP (Task G · form C1, C2, C3)
+## Task G – Wireshark: DNS → TCP → TLS → HTTP (form C1, C2, C3)
 
 Folder: [`C-wireshark/`](C-wireshark/). Capture: [`phase1-dns-tcp-tls.pcapng`](C-wireshark/phase1-dns-tcp-tls.pcapng) (76 packets, SSH removed; SHA-256 `f0a8c868…a0a5`), taken on the Mac on **vm4's switch port `vmenet3`** while vm4 ran `dig`, a TLS 1.2 `curl` and a TLS 1.3 `curl`. The `.txt` files are `tshark` extracts of the same capture.
 
@@ -118,7 +116,7 @@ Folder: [`C-wireshark/`](C-wireshark/). Capture: [`phase1-dns-tcp-tls.pcapng`](C
 | TLS 1.3 comparison | [G-tls13-vs-tls12.png](C-wireshark/G-tls13-vs-tls12.png) | ServerHello `supported_versions: TLS 1.3`, `TLS_AES_256_GCM_SHA384`; no Certificate message visible (encrypted) |
 | TLS termination | [G-edge-plaintext-backend.png](C-wireshark/G-edge-plaintext-backend.png) · [C-edge-to-backend-http.txt](C-wireshark/C-edge-to-backend-http.txt) | the same moment, edge → Backend B on port 3002: plain `GET /api/status HTTP/1.1` with `X-Forwarded-For: 192.168.64.14`, `X-Forwarded-Proto: https`, JSON reply |
 
-## D3 – Failure demonstration: Backend A down (form D3, Option A)
+## Failure demonstration – Backend A down (form D3, Option A)
 
 Folder: [`D-caching-failures/`](D-caching-failures/).
 
