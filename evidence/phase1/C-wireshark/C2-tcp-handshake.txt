@@ -1,0 +1,4 @@
+frame.number ip.src tcp.srcport ip.dst tcp.dstport tcp.flags.str tcp.seq tcp.seq_raw tcp.ack tcp.ack_raw tcp.window_size_value tcp.options.mss_val tcp.options.wscale.shift
+15 192.168.64.14 34060 192.168.64.12 443 ··········S· 0 936201354 0 0 64240 1460 7
+16 192.168.64.12 443 192.168.64.14 34060 ·······A··S· 0 2703154826 1 936201355 65160 1460 7
+17 192.168.64.14 34060 192.168.64.12 443 ·······A···· 1 936201355 1 2703154827 502  

@@ -1,0 +1,31 @@
+
+===================================================================
+Follow: tcp,ascii
+Filter: tcp.stream eq 2
+Node 0: 192.168.64.12:52440
+Node 1: 192.168.64.14:3002
+192
+GET /api/status HTTP/1.1
+Host: app.teamvks.test
+X-Real-IP: 192.168.64.14
+X-Forwarded-For: 192.168.64.14
+X-Forwarded-Proto: https
+Connection: close
+user-agent: curl/8.5.0
+accept: */*
+
+
+	174
+HTTP/1.1 200 OK
+Server: teamvks-backend/B
+Date: Sun, 04 Oct 2026 11:09:37 GMT
+Content-Type: application/json
+Content-Length: 58
+Cache-Control: no-store
+X-Backend: B
+
+
+	58
+{"backend": "B", "status": "ok", "host": "vm4-backend-b"}
+
+===================================================================

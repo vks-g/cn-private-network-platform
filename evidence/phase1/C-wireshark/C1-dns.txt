@@ -1,0 +1,11 @@
+frame.number ip.src udp.srcport ip.dst udp.dstport dns.id dns.flags.response dns.flags.authoritative dns.qry.name dns.qry.type dns.a dns.resp.ttl dns.flags.rcode dns.time
+3 192.168.64.14 40019 192.168.64.11 53 0x0d91 False  app.teamvks.test 1    
+4 192.168.64.11 53 192.168.64.14 40019 0x0d91 True True app.teamvks.test 1 192.168.64.12 0 0 0.001589000
+9 192.168.64.14 53945 192.168.64.11 53 0x89ae False  app.teamvks.test 1    
+10 192.168.64.14 53945 192.168.64.11 53 0x77ab False  app.teamvks.test 28    
+11 192.168.64.11 53 192.168.64.14 53945 0x89ae True True app.teamvks.test 1 192.168.64.12 0 0 0.000548000
+12 192.168.64.11 53 192.168.64.14 53945 0x77ab True False app.teamvks.test 28   3 0.000537000
+38 192.168.64.14 32990 192.168.64.11 53 0xfed5 False  app.teamvks.test 1    
+39 192.168.64.14 32990 192.168.64.11 53 0x97d1 False  app.teamvks.test 28    
+40 192.168.64.11 53 192.168.64.14 32990 0xfed5 True True app.teamvks.test 1 192.168.64.12 0 0 0.001074000
+41 192.168.64.11 53 192.168.64.14 32990 0x97d1 True False app.teamvks.test 28   3 0.001045000

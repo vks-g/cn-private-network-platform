@@ -104,4 +104,18 @@ Folder: [`D-caching-failures/`](D-caching-failures/). Cacheable endpoint: `/api/
 | Backends' view | [F-backend-logs.png](D-caching-failures/F-backend-logs.png) | only a handful of `/api/info` requests reached A and B; the edge's revalidation arrived at A as a `304` |
 | Live data not cached | [F-status-not-cached.png](D-caching-failures/F-status-not-cached.png) | `/api/status`: `cache-control: no-store`, no `x-cache-status`, A/B still alternating |
 
-Evidence for the remaining form sections is added as each task is built: C (Wireshark) and D3 (failure demo).
+## C – Wireshark: DNS → TCP → TLS → HTTP (Task G · form C1, C2, C3)
+
+Folder: [`C-wireshark/`](C-wireshark/). Capture: [`phase1-dns-tcp-tls.pcapng`](C-wireshark/phase1-dns-tcp-tls.pcapng) (76 packets, SSH removed; SHA-256 `f0a8c868…a0a5`), taken on the Mac on **vm4's switch port `vmenet3`** while vm4 ran `dig`, a TLS 1.2 `curl` and a TLS 1.3 `curl`. The `.txt` files are `tshark` extracts of the same capture.
+
+| Form item | File | What it shows |
+| --- | --- | --- |
+| **C1** DNS query | [G-C1-dns-query.png](C-wireshark/G-C1-dns-query.png) · [C1-dns.txt](C-wireshark/C1-dns.txt) | frame 3: `192.168.64.14:40019 → 192.168.64.11:53` UDP, ID `0x0d91`, `app.teamvks.test` type A, recursion desired |
+| **C1** DNS response | [G-C1-dns-response.png](C-wireshark/G-C1-dns-response.png) | frame 4: `53 → 40019`, same ID, **authoritative**, answer `192.168.64.12`, TTL 0, answered in 1.589 ms |
+| **C2** TCP handshake | [G-C2-handshake-list.png](C-wireshark/G-C2-handshake-list.png) · [G-C2-syn.png](C-wireshark/G-C2-syn.png) · [G-C2-syn-ack.png](C-wireshark/G-C2-syn-ack.png) · [C2-tcp-handshake.txt](C-wireshark/C2-tcp-handshake.txt) | frames 15–17, port `34060 → 443`: SYN raw seq 936201354 · SYN-ACK raw seq 2703154826, ack 936201355 · ACK 936201355 / 2703154827; MSS 1460, SACK, window scale ×128 |
+| **C3** TLS 1.2 handshake | [G-C3-overview.png](C-wireshark/G-C3-overview.png) · [G-C3-client-hello.png](C-wireshark/G-C3-client-hello.png) · [G-C3-server-hello-certificate.png](C-wireshark/G-C3-server-hello-certificate.png) · [G-C3-certificate.png](C-wireshark/G-C3-certificate.png) · [G-C3-server-key-exchange.png](C-wireshark/G-C3-server-key-exchange.png) · [G-C3-client-key-exchange-ccs.png](C-wireshark/G-C3-client-key-exchange-ccs.png) · [C3-tls-handshake.txt](C-wireshark/C3-tls-handshake.txt) | ClientHello (SNI `app.teamvks.test`, 28 cipher suites, ALPN h2/http1.1) → ServerHello (`TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`, h2) + Certificate (`app.teamvks.test`, issuer `teamvks Lab Root CA`) + ServerKeyExchange (x25519, rsa_pss_rsae_sha256) → ClientKeyExchange + ChangeCipherSpec |
+| **C3** encrypted HTTP | [G-C3-encrypted-app-data.png](C-wireshark/G-C3-encrypted-app-data.png) | Application Data records: opaque bytes, `[Application Data Protocol: HTTP2]` |
+| TLS 1.3 comparison | [G-tls13-vs-tls12.png](C-wireshark/G-tls13-vs-tls12.png) | ServerHello `supported_versions: TLS 1.3`, `TLS_AES_256_GCM_SHA384`; no Certificate message visible (encrypted) |
+| TLS termination | [G-edge-plaintext-backend.png](C-wireshark/G-edge-plaintext-backend.png) · [C-edge-to-backend-http.txt](C-wireshark/C-edge-to-backend-http.txt) | the same moment, edge → Backend B on port 3002: plain `GET /api/status HTTP/1.1` with `X-Forwarded-For: 192.168.64.14`, `X-Forwarded-Proto: https`, JSON reply |
+
+Evidence for the remaining form item (D3 failure demo) is added next.

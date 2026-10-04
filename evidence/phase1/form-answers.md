@@ -307,6 +307,40 @@ Sources: [F-D1-headers.txt](D-caching-failures/F-D1-headers.txt) · [F-D1-304.tx
 
 _Write it in your own words from what you observed. Points to cover: what `max-age=60` let the edge do (5× HIT, no backend contacted); what the ETag is and why A and B share it (the copy fetched from B was confirmed by A); what the 304 saved (the body) and what it didn't (the round trip)._
 
-## C · D3
+## C1 – DNS query and response (Wireshark)
 
-_Filled in as each task is completed._
+Capture on vm4's switch port, `dig app.teamvks.test` from vm4 (frames 3–4 of [phase1-dns-tcp-tls.pcapng](C-wireshark/phase1-dns-tcp-tls.pcapng)):
+
+- **Query (frame 3):** source `192.168.64.14` (vm4) port `40019` (ephemeral) → destination `192.168.64.11` (vm1, dnsmasq) port **UDP 53**. Transaction ID `0x0d91`, question `app.teamvks.test` type **A**, class IN, recursion desired.
+- **Response (frame 4):** `192.168.64.11:53 → 192.168.64.14:40019`, same ID `0x0d91`, flags: response, **authoritative**, no error. Answer: `app.teamvks.test A 192.168.64.12` (the edge), **TTL 0** seconds. Answered in 1.589 ms.
+- curl's own lookups (frames 9–12) also asked AAAA, answered "No such name": the zone only has IPv4 records.
+
+## C2 – TCP three-way handshake (Wireshark)
+
+TLS 1.2 connection from vm4 to the edge (frames 15–17, `tcp.stream eq 0`):
+
+| Frame | Direction | Flags | Seq (raw) | Ack (raw) |
+| --- | --- | --- | --- | --- |
+| 15 | `192.168.64.14:34060 → 192.168.64.12:443` | SYN | 0 (936201354) | – |
+| 16 | `192.168.64.12:443 → 192.168.64.14:34060` | SYN, ACK | 0 (2703154826) | 1 (936201355) |
+| 17 | `192.168.64.14:34060 → 192.168.64.12:443` | ACK | 1 (936201355) | 1 (2703154827) |
+
+Client port 34060 is ephemeral; server port 443 is HTTPS. Each side picks a random initial sequence number and the other acknowledges it +1, so both directions are synchronised before any data flows: a reliable, ordered byte stream. SYN options: MSS 1460, SACK permitted, timestamps, window scale ×128.
+
+## C3 – TLS handshake and encrypted data (Wireshark)
+
+Same connection (`tcp.stream eq 0 && tls`), TLS 1.2 so the certificate is visible:
+
+1. **ClientHello (frame 18):** TLS 1.2, SNI `app.teamvks.test` (clear text), **28 cipher suites offered**, ALPN `h2, http/1.1`.
+2. **ServerHello + Certificate + ServerKeyExchange + ServerHelloDone (frame 20):** server picks **TLS 1.2, `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`**, ALPN `h2`. Certificate: subject `CN=app.teamvks.test`, issuer `CN=teamvks Lab Root CA`, valid 2026-10-03 → 2027-11-04, SAN `app.teamvks.test`, `api.teamvks.test`. Key exchange: ECDHE on **x25519**, signed with `rsa_pss_rsae_sha256`.
+3. **ClientKeyExchange + ChangeCipherSpec + Encrypted Handshake Message (frame 22):** client's ECDHE public value, then it switches to encryption (Finished).
+4. **ChangeCipherSpec + Encrypted Handshake Message (frame 23):** server switches too.
+5. **Application Data (frames 24–30):** the HTTP/2 request and response, encrypted (AES-256-GCM); paths, headers and JSON are not readable.
+
+For comparison, the TLS 1.3 connection (frames 45–70) shows only ClientHello and ServerHello (`TLS_AES_256_GCM_SHA384`, `supported_versions: TLS 1.3`); its certificate travels inside encrypted records. The edge→backend leg in the same capture (frames 57–67, port 3002) is plain HTTP with `X-Forwarded-For: 192.168.64.14`: TLS terminates at the edge.
+
+Sources: [C1-dns.txt](C-wireshark/C1-dns.txt) · [C2-tcp-handshake.txt](C-wireshark/C2-tcp-handshake.txt) · [C3-tls-handshake.txt](C-wireshark/C3-tls-handshake.txt) · [C-edge-to-backend-http.txt](C-wireshark/C-edge-to-backend-http.txt)
+
+## D3
+
+_Filled in after the failure demo._
