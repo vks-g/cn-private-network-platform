@@ -17,7 +17,7 @@ A Computer Networks course project (Section D) that builds a small private "clou
 
 > The application stays simple. The network is the project.
 
-**Contents:** [Team](#team) · [Architecture](#architecture) · [Lab inventory](#lab-inventory) · [What each layer does](#what-each-layer-does) · [See it work](#see-it-work) · [How to run the backends](#how-to-run-the-backends) · [Build it yourself](#build-it-yourself) · [Evidence](#phase-1-evidence) · [Repository layout](#repository-layout) · [Security](#security-notes)
+**Contents:** [Team](#team) · [Architecture](#architecture) · [Lab inventory](#lab-inventory) · [What each layer does](#what-each-layer-does) · [See it work](#see-it-work) · [How to run the backends](#how-to-run-the-backends) · [Deploy it](#deploy-it) · [Evidence](#phase-1-evidence) · [Repository layout](#repository-layout) · [Security](#security-notes)
 
 ## Team
 
@@ -79,7 +79,7 @@ sequenceDiagram
     E-->>C: 200 OK, encrypted
 ```
 
-The client only ever knows the **name** and the **edge**. The backends can change without any client noticing; that's the job of a load balancer. A deeper write-up (OSI layer map, cloud equivalents, single points of failure) is in [docs/architecture.md](docs/architecture.md). A one-page visual overview is in [docs/showcase.html](docs/showcase.html).
+The client only ever knows the **name** and the **edge**. The backends can change without any client noticing; that's the job of a load balancer. A deeper write-up (OSI layer map, cloud equivalents, single points of failure) is in [docs/architecture.md](docs/architecture.md).
 
 ## Lab inventory
 
@@ -97,12 +97,12 @@ Private records: `app.teamvks.test` and `api.teamvks.test` → `192.168.64.12` (
 
 | Layer | Protocol | Where in this project | Proof |
 | --- | --- | --- | --- |
-| Application | DNS | dnsmasq on vm1 answers `*.teamvks.test`, forwards other names to the Mac | [A3 dig](evidence/phase1/A-lan-dns/A3-dig-app-from-vm4.txt) |
-| Application | HTTP/1.1 · HTTP/2 | HTTP/2 client → edge, HTTP/1.1 edge → backends | [access log](evidence/phase1/B-https-lb/E-access-log-https.txt) |
-| Security | TLS 1.2 / 1.3 | terminated at nginx; certificate from our own CA (`tls/`) | [curl -v](evidence/phase1/B-https-lb/E-B1-curl-v.txt) |
-| Transport | TCP · UDP | TCP 443 / 3001 / 3002, UDP 53 | [TCP handshake](evidence/phase1/C-wireshark/C2-tcp-handshake.txt) |
-| Network | IPv4 | static addresses in 192.168.64.0/24, gateway .1 | [inventory](evidence/phase1/A-lan-dns/A1-inventory.txt) |
-| Link | Ethernet | UTM virtual switch; ARP maps IP → MAC | [ARP table](evidence/phase1/A-lan-dns/A5-arp-table-vm1.txt) |
+| Application | DNS | dnsmasq on vm1 answers `*.teamvks.test`, forwards other names to the Mac | [A3 dig](evidence/phase1/all-evidence/A-lan-dns/A3-dig-app-from-vm4.txt) |
+| Application | HTTP/1.1 · HTTP/2 | HTTP/2 client → edge, HTTP/1.1 edge → backends | [access log](evidence/phase1/all-evidence/B-https-lb/E-access-log-https.txt) |
+| Security | TLS 1.2 / 1.3 | terminated at nginx; certificate from our own CA (`tls/`) | [curl -v](evidence/phase1/all-evidence/B-https-lb/E-B1-curl-v.txt) |
+| Transport | TCP · UDP | TCP 443 / 3001 / 3002, UDP 53 | [TCP handshake](evidence/phase1/all-evidence/C-wireshark/C2-tcp-handshake.txt) |
+| Network | IPv4 | static addresses in 192.168.64.0/24, gateway .1 | [inventory](evidence/phase1/all-evidence/A-lan-dns/A1-inventory.txt) |
+| Link | Ethernet | UTM virtual switch; ARP maps IP → MAC | [ARP table](evidence/phase1/all-evidence/A-lan-dns/A5-arp-table-vm1.txt) |
 
 | Feature | How |
 | --- | --- |
@@ -162,12 +162,12 @@ HTTP/2 304
 x-cache-status: HIT
 ```
 
-**Failure**: with Backend A stopped, every request still returns `200` from B. After a restart, A rejoins once the 10-second `fail_timeout` expires ([D3 evidence](evidence/phase1/README.md#d3--failure-demonstration-backend-a-down-form-d3-option-a)).
+**Failure**: with Backend A stopped, every request still returns `200` from B. After a restart, A rejoins once the 10-second `fail_timeout` expires ([evidence](evidence/phase1/key-evidence/16-failure-backend-a-down-and-restored.png)).
 
 <table>
   <tr>
-    <td width="50%"><img src="evidence/phase1/B-https-lb/E-safari-padlock-cert-chain.png" alt="Safari padlock and certificate chain teamvks Lab Root CA to app.teamvks.test"></td>
-    <td width="50%"><img src="evidence/phase1/C-wireshark/G-C3-server-hello-certificate.png" alt="Wireshark TLS 1.2 ServerHello with the certificate"></td>
+    <td width="50%"><img src="evidence/phase1/key-evidence/06-https-safari-certificate-chain.png" alt="Safari padlock and certificate chain teamvks Lab Root CA to app.teamvks.test"></td>
+    <td width="50%"><img src="evidence/phase1/key-evidence/13-wireshark-tls-certificate.png" alt="Wireshark TLS 1.2 ServerHello with the certificate"></td>
   </tr>
   <tr>
     <td align="center">Safari trusts the certificate chain</td>
@@ -203,37 +203,34 @@ curl -i http://192.168.64.14:3002/api/status      # X-Backend: B
 
 Every response carries `X-Backend: A` or `B`. More detail: [backend/README.md](backend/README.md).
 
-## Build it yourself
+## Deploy it
 
-Each guide explains the concept, gives the exact commands per VM, shows the expected output and ends with viva practice questions.
+Every config file in [`configs/`](configs/) starts with the command that installs it. The order matters, because each step depends on the one before.
 
-| Step | Guide | Result |
-| --- | --- | --- |
-| A | [UTM lab setup – private LAN](docs/01-utm-lab-setup.md) | 4 VMs, static IPs, SSH, ping matrix |
-| B | [Private DNS with dnsmasq](docs/02-dns.md) | `app.teamvks.test` → `192.168.64.12` |
-| C | [Two REST backends](docs/03-backends.md) | A on 3001, B on 3002, as services |
-| D | [Edge reverse proxy and load balancer](docs/04-edge-load-balancer.md) | round-robin through nginx |
-| E | [HTTPS with our own certificate authority](docs/05-tls.md) | verified TLS, no `-k` |
-| F | [HTTP caching and the edge cache](docs/06-caching.md) | `max-age`, `ETag`, `304`, edge HITs |
-| G | [Wireshark: DNS → TCP → TLS → HTTP](docs/07-wireshark.md) | packet-level proof |
-| – | [Phase 1 video script](docs/video-script.md) | the ≤ 5-minute demo |
-
-Config files for every VM are in [`configs/`](configs/); `scripts/personalize-vm.sh` gives a cloned VM its own hostname, machine-id, SSH keys and static IP.
+| Step | Where | What | Files |
+| --- | --- | --- | --- |
+| 1 | all VMs | static IP, gateway `192.168.64.1`, resolver `192.168.64.11` | [`configs/<vm>/netplan/60-static.yaml`](configs/); [`scripts/personalize-vm.sh`](scripts/personalize-vm.sh) for cloned VMs |
+| 2 | vm1 | private DNS zone `teamvks.test` | [`configs/vm1-dns/dnsmasq.d/teamvks.conf`](configs/vm1-dns/dnsmasq.d/teamvks.conf) |
+| 3 | vm3, vm4 | Backend A and Backend B as services | [`backend/`](backend/) + [`teamvks-backend.env`](configs/vm3-backend-a/teamvks-backend.env) per VM |
+| 4 | Mac + vm2 | local CA, edge certificate, trust on every client | [`tls/README.md`](tls/README.md) |
+| 5 | vm2 | nginx: HTTPS edge, load balancer, cache | [`configs/vm2-edge/nginx/teamvks.conf`](configs/vm2-edge/nginx/teamvks.conf) |
+| 6 | Mac | resolve `*.teamvks.test` through vm1 | `sudo cp configs/mac/resolver/teamvks.test /etc/resolver/` |
 
 ## Phase 1 evidence
 
-| Brief task | Status | Evidence |
-| --- | --- | --- |
-| A · Private LAN between 4 VMs | ✅ | [inventory, ping matrix, ARP, switch behaviour](evidence/phase1/README.md#a--private-lan-task-a--form-a1-a5) |
-| B · Private DNS for `teamvks.test` | ✅ | [config, dig from clients, NXDOMAIN on 8.8.8.8](evidence/phase1/README.md#a--private-dns-task-b--form-a2-a3-a4) |
-| C · Two REST backends | ✅ | [services, 0.0.0.0 vs 127.0.0.1, reboot test](evidence/phase1/README.md#b--backend-services-task-c) |
-| D · Reverse proxy + round-robin | ✅ | [alternating A/B, access log, X-Forwarded-For](evidence/phase1/README.md#b--edge-reverse-proxy-and-load-balancing-task-d-http) |
-| E · HTTPS with a local CA | ✅ | [CA, CSR, curl -v, Safari padlock](evidence/phase1/README.md#b--https-with-a-local-ca-task-e--form-b1-b2-b3) |
-| F · HTTP caching | ✅ | [Cache-Control, ETag, 304, edge MISS/HIT/REVALIDATED](evidence/phase1/README.md#d--http-caching-and-the-edge-cache-task-f--form-d1-d2) |
-| G · Wireshark DNS → TCP → TLS → HTTP | ✅ | [pcapng + annotated screenshots](evidence/phase1/README.md#c--wireshark-dns--tcp--tls--http-task-g--form-c1-c2-c3) |
-| 6.3 · Failure demonstration | ✅ | [Backend A down and restored](evidence/phase1/README.md#d3--failure-demonstration-backend-a-down-form-d3-option-a) |
+- **[Key evidence](evidence/phase1/key-evidence/)**: 16 screenshots and the packet capture, one per requirement. Start here.
+- **[All evidence](evidence/phase1/all-evidence/)**: every screenshot, terminal output and capture, grouped by task.
 
-Everything is indexed in [evidence/phase1/README.md](evidence/phase1/README.md). The submission-form text, filled from the real output, is in [evidence/phase1/form-answers.md](evidence/phase1/form-answers.md).
+| Brief task | Status | Key evidence | All evidence |
+| --- | --- | --- | --- |
+| A · Private LAN between 4 VMs | ✅ | [01](evidence/phase1/key-evidence/01-lan-four-vms-static-ips.png) · [02](evidence/phase1/key-evidence/02-lan-ping-all-pairs.png) | [Task A](evidence/phase1/all-evidence/README.md#task-a--private-lan-form-a1-a5) |
+| B · Private DNS for `teamvks.test` | ✅ | [03](evidence/phase1/key-evidence/03-dns-dig-private-and-public.png) | [Task B](evidence/phase1/all-evidence/README.md#task-b--private-dns-form-a2-a3-a4) |
+| C · Two REST backends | ✅ | [04](evidence/phase1/key-evidence/04-backends-reached-from-edge.png) | [Task C](evidence/phase1/all-evidence/README.md#task-c--backend-services) |
+| D · Reverse proxy + round-robin | ✅ | [07](evidence/phase1/key-evidence/07-load-balancing-https-6x.png) · [08](evidence/phase1/key-evidence/08-nginx-config-and-access-log.png) | [Task D](evidence/phase1/all-evidence/README.md#task-d--reverse-proxy-and-load-balancing-over-http) |
+| E · HTTPS with a local CA | ✅ | [05](evidence/phase1/key-evidence/05-https-curl-verified-no-k.png) · [06](evidence/phase1/key-evidence/06-https-safari-certificate-chain.png) | [Task E](evidence/phase1/all-evidence/README.md#task-e--https-with-a-local-ca-form-b1-b2-b3) |
+| F · HTTP caching | ✅ | [09](evidence/phase1/key-evidence/09-cache-headers-miss.png) · [10](evidence/phase1/key-evidence/10-cache-304-not-modified.png) | [Task F](evidence/phase1/all-evidence/README.md#task-f--http-caching-and-the-edge-cache-form-d1-d2) |
+| G · Wireshark DNS → TCP → TLS → HTTP | ✅ | [11](evidence/phase1/key-evidence/11-wireshark-dns-response.png) – [15](evidence/phase1/key-evidence/15-wireshark-tls-termination.png) · [pcapng](evidence/phase1/key-evidence/phase1-dns-tcp-tls.pcapng) | [Task G](evidence/phase1/all-evidence/README.md#task-g--wireshark-dns--tcp--tls--http-form-c1-c2-c3) |
+| 6.3 · Failure demonstration | ✅ | [16](evidence/phase1/key-evidence/16-failure-backend-a-down-and-restored.png) | [Failure demo](evidence/phase1/all-evidence/README.md#failure-demonstration--backend-a-down-form-d3-option-a) |
 
 ## Repository layout
 
@@ -250,8 +247,10 @@ Everything is indexed in [evidence/phase1/README.md](evidence/phase1/README.md).
 │   └── common/              netplan template, SSH config snippet
 ├── tls/                     CA + server certificates (public only), OpenSSL configs
 ├── scripts/                 personalize-vm.sh for cloned VMs
-├── docs/                    architecture, one guide per task, video script, showcase page
-└── evidence/phase1/         screenshots, terminal output, packet capture, form answers
+├── docs/                    architecture.md: topology, request flow, layer map, cloud equivalents
+└── evidence/phase1/
+    ├── key-evidence/        16 key screenshots + the packet capture
+    └── all-evidence/        everything, grouped by task
 ```
 
 ## Security notes
