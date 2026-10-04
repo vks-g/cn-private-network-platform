@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CN Phase 1 Showcase</title>
+<style>
+  :root {
+    --bg: #0f1218;
+    --panel: #171b24;
+    --line: #2a3140;
+    --text: #e6e9ef;
+    --muted: #9aa3b2;
+    --accent: #8ab4ff;
+    --dns: #7dd3a7;
+    --edge: #f5b971;
+    --app: #c4a7ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 19px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 36px 16px 48px; }
+  h1 { font-size: 34px; margin: 0 0 18px; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 34px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  code, .mono { font-family: "SF Mono", Menlo, monospace; font-size: 0.92em; }
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 18px; margin: 0; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; }
+  svg { width: 100%; height: auto; display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 16px; }
+  tr:last-child td { border-bottom: 0; }
+  ol { margin: 0; padding-left: 24px; }
+  ol li { margin: 4px 0; }
+  .note { color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Computer Networks Project · Phase 1 Showcase</h1>
+  <dl class="facts">
+    <dt>Student</dt><dd>Gokul VKS · 2401020094</dd>
+    <dt>Team</dt><dd>teamvks (solo)</dd>
+    <dt>Infrastructure</dt><dd>Type 3 · four Ubuntu Server 24.04 VMs in UTM on one MacBook</dd>
+    <dt>Private domain</dt><dd><code>app.teamvks.test</code> · <code>api.teamvks.test</code></dd>
+    <dt>Network</dt><dd>UTM Shared Network <code>192.168.64.0/24</code>, gateway = the Mac <code>192.168.64.1</code></dd>
+  </dl>
+
+  <h2>Architecture</h2>
+  <svg viewBox="0 0 1000 400" role="img" aria-label="Client asks DNS on vm1, then connects over HTTPS to nginx on vm2, which load-balances to Backend A on vm3 and Backend B on vm4">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b2"/>
+      </marker>
+    </defs>
+    <g font-family="-apple-system, Helvetica, sans-serif" fill="#e6e9ef">
+      <!-- client -->
+      <rect x="20" y="160" width="190" height="80" rx="10" fill="#1f2531" stroke="#8ab4ff" stroke-width="2"/>
+      <text x="115" y="193" text-anchor="middle" font-size="20" font-weight="600">Client</text>
+      <text x="115" y="220" text-anchor="middle" font-size="15" fill="#9aa3b2">vm4 · Mac (Safari, curl)</text>
+      <!-- dns -->
+      <rect x="370" y="30" width="270" height="80" rx="10" fill="#1f2531" stroke="#7dd3a7" stroke-width="2"/>
+      <text x="505" y="63" text-anchor="middle" font-size="20" font-weight="600">DNS · vm1-dns</text>
+      <text x="505" y="90" text-anchor="middle" font-size="15" fill="#9aa3b2" font-family="Menlo, monospace">192.168.64.11 · dnsmasq</text>
+      <!-- edge -->
+      <rect x="370" y="250" width="270" height="80" rx="10" fill="#1f2531" stroke="#f5b971" stroke-width="2"/>
+      <text x="505" y="283" text-anchor="middle" font-size="20" font-weight="600">Edge · vm2-edge</text>
+      <text x="505" y="310" text-anchor="middle" font-size="15" fill="#9aa3b2" font-family="Menlo, monospace">192.168.64.12 · nginx</text>
+      <text x="505" y="354" text-anchor="middle" font-size="14" fill="#f5b971">TLS ends here · round-robin · edge cache</text>
+      <!-- backends -->
+      <rect x="770" y="170" width="210" height="80" rx="10" fill="#1f2531" stroke="#c4a7ff" stroke-width="2"/>
+      <text x="875" y="203" text-anchor="middle" font-size="20" font-weight="600">Backend A · vm3</text>
+      <text x="875" y="230" text-anchor="middle" font-size="15" fill="#9aa3b2" font-family="Menlo, monospace">192.168.64.13:3001</text>
+      <rect x="770" y="290" width="210" height="80" rx="10" fill="#1f2531" stroke="#c4a7ff" stroke-width="2"/>
+      <text x="875" y="323" text-anchor="middle" font-size="20" font-weight="600">Backend B · vm4</text>
+      <text x="875" y="350" text-anchor="middle" font-size="15" fill="#9aa3b2" font-family="Menlo, monospace">192.168.64.14:3002</text>
+    </g>
+    <g stroke="#9aa3b2" stroke-width="2" fill="none" marker-end="url(#arrow)">
+      <line x1="212" y1="172" x2="364" y2="88"/>
+      <line x1="212" y1="228" x2="364" y2="284"/>
+      <line x1="642" y1="276" x2="764" y2="214"/>
+      <line x1="642" y1="304" x2="764" y2="328"/>
+    </g>
+    <g font-family="-apple-system, Helvetica, sans-serif" font-size="15">
+      <text x="20" y="62" fill="#7dd3a7">1 · DNS lookup · UDP 53</text>
+      <text x="20" y="86" fill="#9aa3b2" font-size="13">app.teamvks.test → 192.168.64.12</text>
+      <text x="20" y="296" fill="#8ab4ff">2 · HTTPS · TCP 443</text>
+      <text x="20" y="318" fill="#9aa3b2" font-size="13">encrypted, certificate checked</text>
+      <text x="646" y="196" fill="#c4a7ff">3 · HTTP · 3001</text>
+      <text x="646" y="384" fill="#c4a7ff">3 · HTTP · 3002</text>
+    </g>
+  </svg>
+
+  <h2>Machines</h2>
+  <table>
+    <thead><tr><th>VM</th><th>Hostname</th><th>Address</th><th>Interface</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>VM1</td><td class="mono">vm1-dns</td><td class="mono">192.168.64.11/24</td><td class="mono">enp0s1</td><td>Private DNS (dnsmasq), UDP/TCP 53</td></tr>
+      <tr><td>VM2</td><td class="mono">vm2-edge</td><td class="mono">192.168.64.12/24</td><td class="mono">enp0s1</td><td>nginx: HTTPS entry point (443) + load balancer</td></tr>
+      <tr><td>VM3</td><td class="mono">vm3-backend-a</td><td class="mono">192.168.64.13/24</td><td class="mono">enp0s1</td><td>Python Backend A, port 3001</td></tr>
+      <tr><td>VM4</td><td class="mono">vm4-backend-b</td><td class="mono">192.168.64.14/24</td><td class="mono">enp0s1</td><td>Python Backend B, port 3002 + test client</td></tr>
+    </tbody>
+  </table>
+
+  <h2>One request, step by step</h2>
+  <ol>
+    <li><b>DNS:</b> the client asks vm1 for <code>app.teamvks.test</code> and gets the edge's IP, <code>192.168.64.12</code>.</li>
+    <li><b>TCP:</b> SYN → SYN-ACK → ACK to the edge on port 443.</li>
+    <li><b>TLS:</b> the edge shows its certificate (signed by my own CA) and the connection is encrypted.</li>
+    <li><b>Load balancing:</b> nginx picks Backend A or B in turn and makes a separate plain-HTTP request to it.</li>
+    <li><b>Response:</b> the JSON comes back through the edge; the <code>X-Backend</code> header shows who answered.</li>
+  </ol>
+  <p class="note">Cloud equivalents: vm1 = Route 53 private zone · vm2 = Application Load Balancer / CDN edge · A and B = instances in a target group.</p>
+</main>
+</body>
+</html>
