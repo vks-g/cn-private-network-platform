@@ -339,9 +339,9 @@ x-backend: B x-cache-status: HIT
 
 Sources: [F-D1-headers.txt](D-caching-failures/F-D1-headers.txt) · [F-D1-304.txt](D-caching-failures/F-D1-304.txt) · [F-edge-hits.txt](D-caching-failures/F-edge-hits.txt) · [F-edge-log.txt](D-caching-failures/F-edge-log.txt)
 
-## D2 – Explain `max-age`, `ETag` and `304` (2–4 sentences, **write this yourself**)
+## D2 – What the Cache-Control value tells the client to do
 
-_Write it in your own words (the form says so). Answer the form's three questions from what you saw: (1) what `public, max-age=60` means, (2) what the client/edge does with it (reuses the copy for 60 s: 5× HIT, no backend contacted), (3) what happens after 60 s (copy is stale → conditional request with the ETag → `304 Not Modified` → copy is fresh again: your `REVALIDATED`). Bonus: what a 304 means and when it happens._
+On `/api/info` the backends send `Cache-Control: public, max-age=60`. That means any cache, the browser or a shared cache like my nginx edge (`public`), may store the response and reuse it for 60 seconds without asking the server again. So while it is fresh, repeated requests are answered from the stored copy: in my test the edge returned `X-Cache-Status: HIT` five times in a row and no backend was contacted. After the 60 seconds the copy is stale, so the cache asks again with `If-None-Match: "2f9bf8e0a1ee62ec"` (the ETag); because the content hadn't changed, the backend answered `304 Not Modified` with no body and the copy became fresh for another 60 seconds (my edge log shows `cache=REVALIDATED … upstream_status=304`). The 304 saves re-sending the body, and because the ETag is a hash of the content it is the same on Backend A and B, so either backend can confirm the copy; `/api/status` is `no-store` so live load-balancing results are never cached.
 
 ## D3 – Failure demonstration (Option A: one backend down)
 
