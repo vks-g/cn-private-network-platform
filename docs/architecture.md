@@ -10,6 +10,8 @@ A client opens `https://app.teamvks.test` and gets a JSON response from one of t
 
 Nothing runs in the cloud. Each component maps to a cloud service in section 6.
 
+**Phase 2** keeps the same four VMs and adds resilience on top (section 8): a backup DNS server and a standby edge on VM3, a 30 s TTL on the records, firewall rules that let only the edge reach the backends, and a layer-by-layer diagnosis script.
+
 ## 2. Topology
 
 All four VMs run on one MacBook (Apple Silicon) in UTM. They are attached to UTM's **Shared Network**, a virtual switch (`bridge100` on the Mac) carrying the private subnet `192.168.64.0/24`. The Mac is the gateway (`192.168.64.1`) and NATs the VMs to the internet, which they use only to install packages.
@@ -109,16 +111,48 @@ Key points:
 | --- | --- |
 | UTM Shared Network 192.168.64.0/24 | a VPC subnet |
 | Mac as gateway + NAT (192.168.64.1) | VPC router + NAT gateway |
-| dnsmasq on VM1 | Route 53 private hosted zone |
+| dnsmasq on VM1 (+ backup on VM3) | Route 53 private hosted zone (answered by several name servers) |
 | nginx on VM2 | AWS Application Load Balancer / GCP HTTPS Load Balancer / CDN edge node |
 | Backends A and B | EC2 instances in a target group |
 | Local CA (OpenSSL) | AWS Private CA / ACM certificate |
-| Firewall rules (Phase 2) | security groups |
+| nftables rules on the backends (Phase 2) | security groups: backends accept traffic only from the load balancer's group |
+| Standby edge + DNS cutover (Phase 2) | blue/green deployment by weighted or failover DNS records |
 
-## 7. Single points of failure (Phase 1)
+## 7. Single points of failure
 
-| Component | If it fails | Fixed in Phase 2 by |
+| Component | If it fails (Phase 1) | Phase 2 | Still a SPOF? |
+| --- | --- | --- | --- |
+| VM1 DNS | names stop resolving (IPs still work) | backup dnsmasq on VM3 with the same records; clients list both servers (Extension A) | no |
+| One backend | the other backend serves all traffic | same, now demonstrated as HA failover (Extension D) | no |
+| VM2 edge | nothing is reachable by name | a standby edge on VM3 can take over by a **planned DNS cutover** (Extension E) | **yes**: if VM2 dies unplanned, clients keep its cached IP until the TTL runs out and someone changes the record by hand |
+
+**Removing the last SPOF (the edge).** Two edges must share one address that moves automatically. On a LAN that is a floating virtual IP managed by **keepalived (VRRP)**: VM2 and VM3 both run nginx, the active one answers ARP for the VIP, and the standby claims it within about a second when the active stops sending heartbeats. DNS keeps pointing at the VIP, so no TTL wait. In the cloud the same job is done by a managed load balancer spread over several zones, or by **health-checked DNS failover** (Route 53 failover records), which still waits for the TTL.
+
+## 8. Phase 2 additions
+
+```mermaid
+flowchart TB
+    subgraph lan["UTM Shared Network – 192.168.64.0/24"]
+        vm1["VM1 vm1-dns · .11<br/>dnsmasq PRIMARY :53"]
+        vm2["VM2 vm2-edge · .12<br/>nginx edge :443 (active)"]
+        vm3["VM3 vm3-backend-a · .13<br/>Backend A :3001<br/>dnsmasq BACKUP :53<br/>nginx STANDBY edge :443<br/>nft: :3001 only from .12"]
+        vm4["VM4 vm4-backend-b · .14<br/>Backend B :3002 · test client<br/>nft: :3002 only from .12"]
+    end
+    vm4 -->|"DNS: .11 first, .13 if .11 fails"| vm1
+    vm4 -.->|"DNS backup"| vm3
+    vm4 -->|"HTTPS 443"| vm2
+    vm4 -.->|"HTTPS 443 after DNS cutover"| vm3
+    vm2 -->|"HTTP 3001"| vm3
+    vm2 -->|"HTTP 3002"| vm4
+```
+
+| Extension | What changed | Where |
 | --- | --- | --- |
-| VM1 DNS | names stop resolving (IPs still work) | backup DNS resolver (Extension A) |
-| VM2 edge | nothing is reachable by name | standby edge + DNS cutover (Extension E) |
-| One backend | the other backend serves all traffic | already tolerated (nginx retries the other upstream) |
+| A Backup DNS | dnsmasq on VM3 (`listen-address=192.168.64.13`); the records moved into one file installed on both servers; VM2–VM4 and the Mac list `.11` then `.13` | [`configs/common/dnsmasq/`](../configs/common/dnsmasq/teamvks-records.conf), [`configs/vm3-backend-a/dnsmasq.d/`](../configs/vm3-backend-a/dnsmasq.d/teamvks.conf), netplan files, [`configs/mac/resolver/`](../configs/mac/resolver/teamvks.test) |
+| B TTL | `host-record=…,30`: answers carry TTL 30 instead of 0, so clients cache them for 30 s | [`teamvks-records.conf`](../configs/common/dnsmasq/teamvks-records.conf) |
+| C Isolation | nftables table `inet teamvks_isolation` on VM3/VM4: ports 3001/3002 accept only `192.168.64.12`, everyone else is dropped; runtime only, with a saved rollback copy | [`configs/vm3-backend-a/nftables/`](../configs/vm3-backend-a/nftables/teamvks-isolation.nft), [`configs/vm4-backend-b/nftables/`](../configs/vm4-backend-b/nftables/teamvks-isolation.nft) |
+| D HA failover | unchanged config, now tested: passive health check (`max_fails=1 fail_timeout=10s`) + `proxy_next_upstream` | [`configs/vm2-edge/nginx/teamvks.conf`](../configs/vm2-edge/nginx/teamvks.conf) |
+| E Standby edge | nginx on VM3 with the **same** config file, its own key and a certificate signed by our CA; every response carries `X-Edge: <hostname>` | same nginx file, [`tls/teamvks-standby.crt`](../tls/teamvks-standby.crt) |
+| F Diagnosis | `diagnose.sh` checks DNS → TCP → TLS → HTTP and names the first broken layer | [`scripts/diagnose.sh`](../scripts/diagnose.sh), [`docs/troubleshooting.md`](troubleshooting.md) |
+
+Phase 2 listening ports: VM1 53; VM2 80, 443; **VM3 3001, 53, 80, 443**; VM4 3002.

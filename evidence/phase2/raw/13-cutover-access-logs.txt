@@ -1,4 +1,4 @@
-# 13 · Extension E: during the cutover both edges served traffic: the old edge vm2 still got 6 requests from vm4 (cached record), the new edge vm3 got vm1 at once and vm4 after the TTL expired
+# 13 · Extension E: during the cutover both edges served traffic: the old edge vm2 served vm4 until 12:11:46 (6 requests, 4 of them after the record change, from its cache); the new edge vm3 got vm1 at once and vm4 after the TTL expired
 
 ## vm2-edge
 vks@vm2-edge:~$ N=$(sudo wc -l < /var/log/nginx/teamvks-access.log); echo "access log: $N lines before the cutover"

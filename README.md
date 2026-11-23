@@ -1,6 +1,7 @@
 # CN Private Network Service Platform
 
 ![Phase 1](https://img.shields.io/badge/Phase%201-complete-2ea44f)
+![Phase 2](https://img.shields.io/badge/Phase%202-complete-2ea44f)
 ![Submission](https://img.shields.io/badge/Type%203-UTM%20virtual%20machines-555)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu%20Server-24.04-E95420?logo=ubuntu&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-1.24-009639?logo=nginx&logoColor=white)
@@ -17,7 +18,7 @@ A Computer Networks course project (Section D) that builds a small private "clou
 
 > The application stays simple. The network is the project.
 
-**Contents:** [Team](#team) · [Architecture](#architecture) · [Lab inventory](#lab-inventory) · [What each layer does](#what-each-layer-does) · [See it work](#see-it-work) · [How to run the backends](#how-to-run-the-backends) · [Deploy it](#deploy-it) · [Evidence](#phase-1-evidence) · [Repository layout](#repository-layout) · [Security](#security-notes)
+**Contents:** [Team](#team) · [Architecture](#architecture) · [Lab inventory](#lab-inventory) · [What each layer does](#what-each-layer-does) · [See it work](#see-it-work) · [How to run the backends](#how-to-run-the-backends) · [Deploy it](#deploy-it) · [Evidence](#phase-1-evidence) · [Phase 2](#phase-2-harden-and-recover) · [Repository layout](#repository-layout) · [Security](#security-notes)
 
 ## Team
 
@@ -68,7 +69,7 @@ sequenceDiagram
     participant E as vm2 · nginx edge
     participant B as Backend A or B
     C->>D: A record for app.teamvks.test? (UDP 53)
-    D-->>C: 192.168.64.12, TTL 0 (authoritative)
+    D-->>C: 192.168.64.12, TTL 30 (authoritative)
     C->>E: TCP SYN, SYN-ACK, ACK on port 443
     C->>E: TLS ClientHello (SNI app.teamvks.test)
     E-->>C: ServerHello + certificate signed by teamvks Lab Root CA
@@ -87,11 +88,11 @@ The client only ever knows the **name** and the **edge**. The backends can chang
 | --- | --- | --- | --- | --- | --- |
 | VM1 | Mac 1: DNS server | `vm1-dns` | 192.168.64.11/24 | `enp0s1` · `ce:6c:90:a5:66:5a` | dnsmasq, 53/UDP+TCP |
 | VM2 | Mac 2: edge + load balancer | `vm2-edge` | 192.168.64.12/24 | `enp0s1` · `6a:9b:d7:70:ed:9d` | nginx, 80 → 443/TCP |
-| VM3 | Mac 3: Backend A | `vm3-backend-a` | 192.168.64.13/24 | `enp0s1` · `7a:14:d5:23:b0:70` | Python REST, 3001/TCP |
+| VM3 | Mac 3: Backend A (+ Phase 2 backup DNS, standby edge) | `vm3-backend-a` | 192.168.64.13/24 | `enp0s1` · `7a:14:d5:23:b0:70` | Python REST, 3001/TCP; dnsmasq 53; nginx 80/443 (standby) |
 | VM4 | Mac 4: Backend B + client | `vm4-backend-b` | 192.168.64.14/24 | `enp0s1` · `92:b1:96:9b:dc:31` | Python REST, 3002/TCP |
 | Host | UTM host, browser, Wireshark | macOS | 192.168.64.1/24 | `bridge100` | gateway + NAT for the VMs |
 
-Private records: `app.teamvks.test` and `api.teamvks.test` → `192.168.64.12` (the edge, never a backend). `.test` is reserved (RFC 2606), so public DNS answers NXDOMAIN.
+Private records: `app.teamvks.test` and `api.teamvks.test` → `192.168.64.12` (the edge, never a backend), TTL 30 s since Phase 2, served by vm1 and the backup on vm3. `.test` is reserved (RFC 2606), so public DNS answers NXDOMAIN.
 
 ## What each layer does
 
@@ -113,7 +114,7 @@ Private records: `app.teamvks.test` and `api.teamvks.test` → `192.168.64.12` (
 
 ## See it work
 
-Real output from the lab (run on vm4 or the Mac; never with `curl -k`).
+Real output from the lab (run on vm4 or the Mac; never with `curl -k`). Captured in Phase 1, when the records still had TTL 0; since Phase 2 they carry TTL 30.
 
 **DNS** resolves through our own server:
 
@@ -232,6 +233,30 @@ Every config file in [`configs/`](configs/) starts with the command that install
 | G · Wireshark DNS → TCP → TLS → HTTP | ✅ | [11](evidence/phase1/key-evidence/11-wireshark-dns-response.png) – [15](evidence/phase1/key-evidence/15-wireshark-tls-termination.png) · [pcapng](evidence/phase1/key-evidence/phase1-dns-tcp-tls.pcapng) | [Task G](evidence/phase1/all-evidence/README.md#task-g--wireshark-dns--tcp--tls--http-form-c1-c2-c3) |
 | 6.3 · Failure demonstration | ✅ | [16](evidence/phase1/key-evidence/16-failure-backend-a-down-and-restored.png) | [Failure demo](evidence/phase1/all-evidence/README.md#failure-demonstration--backend-a-down-form-d3-option-a) |
 
+## Phase 2: harden and recover
+
+Same four VMs, extended. Full write-up: **[Phase 2 report](docs/phase2-report.md)**, which covers what changed, test results, troubleshooting findings, one learning paragraph per extension and the commands to re-run each test live. The other Phase 2 documents are the updated [architecture](docs/architecture.md#8-phase-2-additions) and the [troubleshooting runbook](docs/troubleshooting.md).
+
+| Extension | What we did | Result | Evidence |
+| --- | --- | --- | --- |
+| A · Backup DNS | dnsmasq on vm3 with the same records file; clients list `.11` then `.13` | vm1's dnsmasq stopped → queries move to `.13` within a millisecond, HTTPS keeps working | [01](evidence/phase2/01-dns-backup-server-on-vm3.png) – [04](evidence/phase2/04-dns-failure-vs-app-failure.png) |
+| B · TTL | `host-record=…,30` | a caching client keeps the old answer until the 30 s TTL runs out; `resolvectl flush-caches` switches at once | [12](evidence/phase2/12-cutover-ttl-countdown.png) · [14](evidence/phase2/14-cutback-flush-cache.png) |
+| C · Isolation | nftables on vm3/vm4: ports 3001/3002 only from the edge | clients time out, the edge gets 200, HTTPS unaffected; rolled back to the saved copy | [05](evidence/phase2/05-isolation-rule-and-rollback-copy.png) – [07](evidence/phase2/07-isolation-rollback.png) |
+| D · HA failover | nginx passive health check + `proxy_next_upstream` | A down → 10/10 served by B; A back → round-robin resumes; the edge shown as the remaining SPOF | [08](evidence/phase2/08-ha-backend-a-down.png) – [10](evidence/phase2/10-ha-edge-is-spof.png) |
+| E · Edge migration | standby nginx on vm3 (same file, own CA-signed cert), DNS cutover | new lookups go to vm3 at once; cached clients stay on vm2 until the TTL expires | [11](evidence/phase2/11-standby-edge-on-vm3.png) – [13](evidence/phase2/13-cutover-access-logs.png) |
+| F · Troubleshooting | [`diagnose.sh`](scripts/diagnose.sh) checks DNS → TCP → TLS → HTTP | four drills, one per layer, each found and fixed | [15](evidence/phase2/15-drill-dns-record-typo.png) – [19](evidence/phase2/19-final-state-all-layers-pass.png) |
+
+All 19 screenshots with descriptions: [evidence/phase2/](evidence/phase2/).
+
+**Phase 2 deploy steps** (after the Phase 1 steps above):
+
+| Step | Where | What | Files |
+| --- | --- | --- | --- |
+| 7 | vm1, vm3 | shared records with TTL 30; backup dnsmasq on vm3 | [`configs/common/dnsmasq/`](configs/common/dnsmasq/teamvks-records.conf), [`configs/vm3-backend-a/dnsmasq.d/`](configs/vm3-backend-a/dnsmasq.d/teamvks.conf) |
+| 8 | vm2–vm4, Mac | resolvers list `.11` then `.13` | netplan files, [`configs/mac/resolver/teamvks.test`](configs/mac/resolver/teamvks.test) |
+| 9 | vm3 | standby edge: same nginx file, own key, certificate signed by our CA | [`configs/vm2-edge/nginx/teamvks.conf`](configs/vm2-edge/nginx/teamvks.conf), [`tls/teamvks-standby.crt`](tls/teamvks-standby.crt) |
+| 10 | vm3, vm4 (demo only) | backend isolation, then rollback | [`configs/vm3-backend-a/nftables/`](configs/vm3-backend-a/nftables/teamvks-isolation.nft), [`configs/vm4-backend-b/nftables/`](configs/vm4-backend-b/nftables/teamvks-isolation.nft) |
+
 ## Repository layout
 
 ```text
@@ -239,27 +264,26 @@ Every config file in [`configs/`](configs/) starts with the command that install
 ├── README.md
 ├── backend/                 server.py (Python stdlib REST backend) + systemd unit
 ├── configs/
-│   ├── vm1-dns/             dnsmasq zone + netplan static IP
-│   ├── vm2-edge/            nginx site (upstream, TLS, cache) + netplan
-│   ├── vm3-backend-a/       backend settings (A, 3001) + netplan
-│   ├── vm4-backend-b/       backend settings (B, 3002) + netplan
-│   ├── mac/resolver/        sends *.teamvks.test from macOS to vm1
-│   └── common/              netplan template, SSH config snippet
-├── tls/                     CA + server certificates (public only), OpenSSL configs
-├── scripts/                 personalize-vm.sh for cloned VMs
-├── docs/                    architecture.md: topology, request flow, layer map, cloud equivalents
-└── evidence/phase1/
-    ├── key-evidence/        16 key screenshots + the packet capture
-    └── all-evidence/        everything, grouped by task
+│   ├── vm1-dns/             primary dnsmasq (listen/forward) + netplan static IP
+│   ├── vm2-edge/            nginx site (upstream, TLS, cache, X-Edge), shared with the standby edge + netplan
+│   ├── vm3-backend-a/       backend A settings, backup dnsmasq, nftables isolation + netplan
+│   ├── vm4-backend-b/       backend B settings, nftables isolation + netplan
+│   ├── mac/resolver/        sends *.teamvks.test from macOS to vm1, then vm3
+│   └── common/              shared DNS records (TTL 30), netplan template, SSH config snippet
+├── tls/                     CA + edge and standby certificates (public only), OpenSSL configs
+├── scripts/                 personalize-vm.sh, diagnose.sh (DNS→TCP→TLS→HTTP), watch-cutover.sh
+├── docs/                    architecture.md, phase2-report.md, troubleshooting.md
+└── evidence/
+    ├── phase1/
+    │   ├── key-evidence/    16 key screenshots + the packet capture
+    │   └── all-evidence/    everything, grouped by task
+    └── phase2/              numbered screenshots per extension + raw terminal output
 ```
 
 ## Security notes
 
-- Only **public** certificates are in git. The CA key stays on the Mac (`tls/private/`, git-ignored). The edge's private key was generated on vm2 and never left it (`/etc/nginx/tls/`, mode 600, root).
+- Only **public** certificates are in git. The CA key stays on the Mac (`tls/private/`, git-ignored). The edge's private key was generated on vm2 and never left it (`/etc/nginx/tls/`, mode 600, root); the standby edge's key was generated on vm3 the same way.
 - `.gitignore` blocks `*.key`, `*.csr`, `*.srl`, TLS key-log files and screen recordings.
 - No command in this repo uses `curl -k`: every client verifies the certificate chain and the hostname.
 - The backends run as an unprivileged throwaway user (`DynamicUser=yes`), not as root.
 
-## Next: Phase 2
-
-Phase 1 still has single points of failure: vm1 (DNS) and vm2 (the edge). The Phase 2 extensions add a backup DNS resolver, firewall rules so only the edge can reach ports 3001/3002, and a standby edge.
