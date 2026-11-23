@@ -1,1 +1,6 @@
+# /etc/resolver/teamvks.test on the Mac: send *.teamvks.test queries to our DNS servers.
+# Phase 2, Extension A: primary (vm1) first, backup (vm3) second.
+# Install:  sudo install -m 644 configs/mac/resolver/teamvks.test /etc/resolver/teamvks.test
+# Check:    scutil --dns | grep -A4 teamvks.test
 nameserver 192.168.64.11
+nameserver 192.168.64.13

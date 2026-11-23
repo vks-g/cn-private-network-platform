@@ -20,4 +20,8 @@ network:
         # Task B: every VM (vm1 included) asks our own DNS server on vm1.
         # dnsmasq answers *.teamvks.test and forwards other names to 192.168.64.1.
         # (Task A used 192.168.64.1 directly, before dnsmasq existed.)
-        addresses: [192.168.64.11]
+        # Phase 2, Extension A: primary vm1 first, backup vm3 second. If vm1 stops
+        # answering, systemd-resolved switches to vm3 ("Current DNS Server" in
+        # resolvectl status) and keeps using it until that one fails.
+        # DNS-only change, so "sudo netplan apply" over SSH is safe (the IP stays).
+        addresses: [192.168.64.11, 192.168.64.13]
