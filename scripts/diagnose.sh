@@ -45,7 +45,7 @@ if [[ -z $IP ]]; then
         "every server above has no reply -> dnsmasq stopped on vm1 and vm3 (systemctl status dnsmasq)" \
         "servers answer but this machine doesn't -> wrong resolver config here (resolvectl status, netplan nameservers)"
 fi
-ok "resolver on $(hostname) (systemd-resolved, cached) -> $IP"
+ok "system resolver on $(hostname) (getent, what curl uses) -> $IP"
 [[ $EDGES == *" $IP "* ]] || warn "$IP is not one of our edges ($EDGES) -> wrong IP in the DNS record?"
 
 # ---- 2. TCP ------------------------------------------------------------------
