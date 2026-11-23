@@ -1,0 +1,28 @@
+# 09 · Extension D: Backend A restarted → after fail_timeout nginx sends it real traffic again and round-robin A/B resumes (access log upstream column)
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ # wait out fail_timeout=10s, then nginx tries A again with real traffic
+vks@vm4-backend-b:~$ sleep 10; for i in $(seq 6); do curl -si https://app.teamvks.test/api/status | tr -d "\r" | gr
+ep -iE "^HTTP|x-backend" | paste -sd" "; done
+HTTP/2 200  x-backend: B
+HTTP/2 200  x-backend: B
+HTTP/2 200  x-backend: A
+HTTP/2 200  x-backend: B
+HTTP/2 200  x-backend: A
+HTTP/2 200  x-backend: B
+vks@vm4-backend-b:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo systemctl start teamvks-backend; systemctl is-active teamvks-backend
+active
+vks@vm3-backend-a:~$
+
+## vm2-edge
+vks@vm2-edge:~$ sudo tail -n 6 /var/log/nginx/teamvks-access.log | sed -E "s/ tls=\S+ cache=\S+//; s/^\S+ //"
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.009
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.003
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.13:3001 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.004
+vks@vm2-edge:~$

@@ -1,0 +1,40 @@
+# 08 · Extension D: Backend A stopped → 10/10 requests 200 from B; the access log shows the first request retried on B (502 → 200), then A is skipped; error.log names the refused upstream
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ for i in $(seq 10); do curl -si https://app.teamvks.test/api/status | tr -d "\r" | grep -iE "^
+HTTP|x-backend" | paste -sd" "; done | sort | uniq -c
+     10 HTTP/2 200  x-backend: B
+vks@vm4-backend-b:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo systemctl stop teamvks-backend; systemctl is-active teamvks-backend
+inactive
+vks@vm3-backend-a:~$
+
+## vm2-edge
+vks@vm2-edge:~$ grep -nE "upstream teamvks|server 192|proxy_next_upstream|proxy_connect_timeout" /etc/nginx/sites-a
+vailable/teamvks
+13:# plus proxy_next_upstream is the HA failover: a dead backend is skipped.
+30:upstream teamvks_backends {
+37:    server 192.168.64.13:3001 max_fails=1 fail_timeout=10s;   # Backend A (vm3)
+38:    server 192.168.64.14:3002 max_fails=1 fail_timeout=10s;   # Backend B (vm4)
+84:    proxy_connect_timeout     2s;
+85:    proxy_next_upstream       error timeout http_502 http_503 http_504;
+86:    proxy_next_upstream_tries 2;
+vks@vm2-edge:~$ sudo tail -n 10 /var/log/nginx/teamvks-access.log | sed -E "s/ tls=\S+ cache=\S+//; s/^\S+ //"
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.13:3001, 192.168.64.14:3002 upstream_status=502, 200 upstream_ti
+me=0.002, 0.005
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.003
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.001
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+"GET /api/status HTTP/2.0" 200 upstream=192.168.64.14:3002 upstream_status=200 upstream_time=0.002
+vks@vm2-edge:~$ sudo tail -n1 /var/log/nginx/error.log | sed -E 's/^(\S+ \S+).*(connect\(\) failed[^,]*).*(upstream
+: "[^"]*").*/\1 \2 \3/'
+2026/11/23 12:07:53 connect() failed (111: Connection refused) while connecting to upstream upstream: "http://192.1
+68.64.13:3001/api/status"
+vks@vm2-edge:~$

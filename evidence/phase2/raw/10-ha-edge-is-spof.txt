@@ -1,0 +1,24 @@
+# 10 · Extension D: nginx stopped on vm2 → DNS still answers and both backends return 200, yet the service is down (443 refused): the edge is the remaining single point of failure; restarted
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ # the edge is down: DNS works, both backends are healthy...
+vks@vm4-backend-b:~$ dig +short app.teamvks.test
+192.168.64.12
+vks@vm4-backend-b:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HT
+TP %{http_code}\n" http://192.168.64.$u/api/status; done
+192.168.64.13:3001 -> HTTP 200
+192.168.64.14:3002 -> HTTP 200
+vks@vm4-backend-b:~$ # ...but the service is unreachable: the edge is still a single point of failure
+vks@vm4-backend-b:~$ curl -sS https://app.teamvks.test/api/status
+curl: (7) Failed to connect to app.teamvks.test port 443 after 4 ms: Couldn't connect to server
+vks@vm4-backend-b:~$ curl -si https://app.teamvks.test/api/status | tr -d "\r" | grep -iE "^HTTP|x-edge|x-backend"
+| paste -sd" "
+HTTP/2 200  x-backend: A x-edge: vm2-edge
+vks@vm4-backend-b:~$
+
+## vm2-edge
+vks@vm2-edge:~$ sudo systemctl stop nginx; systemctl is-active nginx
+inactive
+vks@vm2-edge:~$ sudo systemctl start nginx; systemctl is-active nginx
+active
+vks@vm2-edge:~$
