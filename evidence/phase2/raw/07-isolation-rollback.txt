@@ -1,0 +1,37 @@
+# 07 · Extension C: rollback: table deleted on both backends, ruleset diff against the saved copy is empty, direct access works again
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo nft list tables
+table inet teamvks_isolation
+vks@vm3-backend-a:~$ sudo nft delete table inet teamvks_isolation; sudo nft list tables | wc -l
+0
+vks@vm3-backend-a:~$ sudo nft list ruleset | diff - ~/nft-rollback.rules && echo "ruleset is identical to the rollba
+ck copy"
+ruleset is identical to the rollback copy
+vks@vm3-backend-a:~$
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ sudo nft list tables
+table inet teamvks_isolation
+vks@vm4-backend-b:~$ sudo nft delete table inet teamvks_isolation; sudo nft list tables | wc -l
+0
+vks@vm4-backend-b:~$ sudo nft list ruleset | diff - ~/nft-rollback.rules && echo "ruleset is identical to the rollb
+ack copy"
+ruleset is identical to the rollback copy
+vks@vm4-backend-b:~$
+
+## vm1-dns
+vks@vm1-dns:~$ # after the rollback on vm3 and vm4: direct access works again
+vks@vm1-dns:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{ht
+tp_code}\n" http://192.168.64.$u/api/status; done
+192.168.64.13:3001 -> HTTP 200
+192.168.64.14:3002 -> HTTP 200
+vks@vm1-dns:~$
+
+## macOS host
+mac:~$ # after the rollback
+mac:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{http_code}
+\n" http://192.168.64.$u/api/status; done
+192.168.64.13:3001 -> HTTP 200
+192.168.64.14:3002 -> HTTP 200
+mac:~$

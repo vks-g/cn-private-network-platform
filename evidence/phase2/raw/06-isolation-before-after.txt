@@ -1,0 +1,53 @@
+# 06 · Extension C: before → 200 from any host; after → vm1 and the Mac time out (dropped), the edge still gets 200, HTTPS through the edge still alternates A/B; drop counters on vm3
+
+## vm1-dns
+vks@vm1-dns:~$ # BEFORE the rule: any LAN host reaches the backends directly
+vks@vm1-dns:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{ht
+tp_code}\n" http://192.168.64.$u/api/status; done
+192.168.64.13:3001 -> HTTP 200
+192.168.64.14:3002 -> HTTP 200
+vks@vm1-dns:~$ # AFTER the rule: direct access is dropped (timeout, not refused)
+vks@vm1-dns:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{ht
+tp_code}\n" http://192.168.64.$u/api/status; done
+curl: (28) Failed to connect to 192.168.64.13 port 3001 after 3004 ms: Timeout was reached
+192.168.64.13:3001 -> HTTP 000
+curl: (28) Failed to connect to 192.168.64.14 port 3002 after 3007 ms: Timeout was reached
+192.168.64.14:3002 -> HTTP 000
+vks@vm1-dns:~$ # ...but the same client through the edge still works
+vks@vm1-dns:~$ for i in 1 2 3 4; do curl -si https://app.teamvks.test/api/status | tr -d "\r" | grep -iE "^HTTP|x-ba
+ckend" | paste -sd" "; done
+HTTP/2 200  x-backend: B
+HTTP/2 200  x-backend: A
+HTTP/2 200  x-backend: B
+HTTP/2 200  x-backend: A
+vks@vm1-dns:~$
+
+## macOS host
+mac:~$ # BEFORE the rule
+mac:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{http_code}
+\n" http://192.168.64.$u/api/status; done
+192.168.64.13:3001 -> HTTP 200
+192.168.64.14:3002 -> HTTP 200
+mac:~$ # AFTER the rule
+mac:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{http_code}
+\n" http://192.168.64.$u/api/status; done
+curl: (28) Failed to connect to 192.168.64.13 port 3001 after 3004 ms: Timeout was reached
+192.168.64.13:3001 -> HTTP 000
+curl: (28) Failed to connect to 192.168.64.14 port 3002 after 3008 ms: Timeout was reached
+192.168.64.14:3002 -> HTTP 000
+mac:~$
+
+## vm2-edge
+vks@vm2-edge:~$ # the edge (192.168.64.12) is the only allowed source
+vks@vm2-edge:~$ for u in 13:3001 14:3002; do curl -sS --connect-timeout 3 -o /dev/null -w "192.168.64.$u -> HTTP %{
+http_code}\n" http://192.168.64.$u/api/status; done
+192.168.64.13:3001 -> HTTP 200
+192.168.64.14:3002 -> HTTP 200
+vks@vm2-edge:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo nft list chain inet teamvks_isolation input | grep counter
+		ip saddr 192.168.64.12 tcp dport 3001 counter packets 17 bytes 1383 accept comment "edge -> backend
+A"
+		tcp dport 3001 counter packets 6 bytes 372 drop comment "direct client -> backend A blocked"
+vks@vm3-backend-a:~$

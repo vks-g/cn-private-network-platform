@@ -1,0 +1,55 @@
+# 05 · Extension C: nftables rule on each backend (only the edge 192.168.64.12 may reach :3001/:3002); the ruleset is saved as a rollback copy before loading
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ grep -vE '^\s*(#|$)' ~/cn/configs/vm3-backend-a/nftables/teamvks-isolation.nft
+table inet teamvks_isolation
+delete table inet teamvks_isolation
+table inet teamvks_isolation {
+    chain input {
+        type filter hook input priority filter; policy accept;
+        iif "lo" tcp dport 3001 accept
+        ip saddr 192.168.64.12 tcp dport 3001 counter accept comment "edge -> backend A"
+        tcp dport 3001 counter drop comment "direct client -> backend A blocked"
+    }
+}
+vks@vm3-backend-a:~$ sudo nft list ruleset | tee ~/nft-rollback.rules | wc -l; ls -l ~/nft-rollback.rules
+0
+-rw-rw-r-- 1 vks vks 0 Nov 23 12:05 /home/vks/nft-rollback.rules
+vks@vm3-backend-a:~$ sudo nft -f ~/cn/configs/vm3-backend-a/nftables/teamvks-isolation.nft && sudo nft list table in
+et teamvks_isolation
+table inet teamvks_isolation {
+	chain input {
+		type filter hook input priority filter; policy accept;
+		iif "lo" tcp dport 3001 accept
+		ip saddr 192.168.64.12 tcp dport 3001 counter packets 0 bytes 0 accept comment "edge -> backend A"
+		tcp dport 3001 counter packets 0 bytes 0 drop comment "direct client -> backend A blocked"
+	}
+}
+vks@vm3-backend-a:~$
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ grep -vE '^\s*(#|$)' ~/cn/configs/vm4-backend-b/nftables/teamvks-isolation.nft
+table inet teamvks_isolation
+delete table inet teamvks_isolation
+table inet teamvks_isolation {
+    chain input {
+        type filter hook input priority filter; policy accept;
+        iif "lo" tcp dport 3002 accept
+        ip saddr 192.168.64.12 tcp dport 3002 counter accept comment "edge -> backend B"
+        tcp dport 3002 counter drop comment "direct client -> backend B blocked"
+    }
+}
+vks@vm4-backend-b:~$ sudo nft list ruleset | tee ~/nft-rollback.rules | wc -l; ls -l ~/nft-rollback.rules
+0
+-rw-rw-r-- 1 vks vks 0 Nov 23 12:05 /home/vks/nft-rollback.rules
+vks@vm4-backend-b:~$ sudo nft -f ~/cn/configs/vm4-backend-b/nftables/teamvks-isolation.nft && sudo nft list table i
+net teamvks_isolation
+table inet teamvks_isolation {
+	chain input {
+		type filter hook input priority filter; policy accept;
+		iif "lo" tcp dport 3002 accept
+		ip saddr 192.168.64.12 tcp dport 3002 counter packets 0 bytes 0 accept comment "edge -> backend B"
+		tcp dport 3002 counter packets 0 bytes 0 drop comment "direct client -> backend B blocked"
+	}
+}
+vks@vm4-backend-b:~$
