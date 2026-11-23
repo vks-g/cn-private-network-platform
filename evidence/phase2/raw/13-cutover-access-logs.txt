@@ -1,0 +1,25 @@
+# 13 · Extension E: during the cutover both edges served traffic: the old edge vm2 still got 6 requests from vm4 (cached record), the new edge vm3 got vm1 at once and vm4 after the TTL expired
+
+## vm2-edge
+vks@vm2-edge:~$ N=$(sudo wc -l < /var/log/nginx/teamvks-access.log); echo "access log: $N lines before the cutover"
+access log: 53 lines before the cutover
+vks@vm2-edge:~$ # which clients reached the OLD edge after the cutover started?
+vks@vm2-edge:~$ sudo tail -n +$((N+1)) /var/log/nginx/teamvks-access.log | awk '{split($1,a,":"); print "requests f
+rom", a[1]}' | uniq -c
+      6 requests from 192.168.64.14
+vks@vm2-edge:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ N=$(sudo wc -l < /var/log/nginx/teamvks-access.log); echo "access log: $N lines before the cuto
+ver"
+access log: 4 lines before the cutover
+vks@vm3-backend-a:~$ sudo sed -i "s/,192.168.64.12,30/,192.168.64.13,30/" /etc/dnsmasq.d/teamvks-records.conf && sud
+o systemctl restart dnsmasq && grep ^host-record /etc/dnsmasq.d/teamvks-records.conf
+host-record=app.teamvks.test,192.168.64.13,30
+host-record=api.teamvks.test,192.168.64.13,30
+vks@vm3-backend-a:~$ # which clients reached the NEW edge?
+vks@vm3-backend-a:~$ sudo tail -n +$((N+1)) /var/log/nginx/teamvks-access.log | awk '{split($1,a,":"); print "reques
+ts from", a[1]}' | uniq -c
+      1 requests from 192.168.64.11
+      7 requests from 192.168.64.14
+vks@vm3-backend-a:~$

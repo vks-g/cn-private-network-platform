@@ -1,0 +1,46 @@
+# 12 · Extensions B + E: record moved to the standby edge (.13) on both DNS servers by 12:11:30 (dnsmasq restart times in the journal); vm1 (no cache) switches at once, vm4 keeps its cached .12 until the 30 s TTL runs out, then moves to vm3
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ # vm4 = a normal caching client: use the systemd-resolved stub (Ubuntu default) for this demo
+vks@vm4-backend-b:~$ sudo ln -sf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf && grep ^nameserver /etc/
+resolv.conf && sudo resolvectl flush-caches
+nameserver 127.0.0.53
+vks@vm4-backend-b:~$ bash ~/cn/scripts/watch-cutover.sh app.teamvks.test 13 5
+TIME      CACHED ANSWER (IP, TTL left)  CONNECTED-TO    X-EDGE          X-BACKEND
+12:11:21  192.168.64.12, ttl 30s        192.168.64.12   vm2-edge        A
+12:11:26  192.168.64.12, ttl 24s        192.168.64.12   vm2-edge        B
+12:11:31  192.168.64.12, ttl 19s        192.168.64.12   vm2-edge        A
+12:11:36  192.168.64.12, ttl 14s        192.168.64.12   vm2-edge        B
+12:11:41  192.168.64.12, ttl 9s         192.168.64.12   vm2-edge        A
+12:11:46  192.168.64.12, ttl 4s         192.168.64.12   vm2-edge        B
+12:11:51  192.168.64.13, ttl 30s        192.168.64.13   vm3-backend-a   B
+12:11:57  192.168.64.13, ttl 24s        192.168.64.13   vm3-backend-a   A
+12:12:02  192.168.64.13, ttl 19s        192.168.64.13   vm3-backend-a   B
+12:12:07  192.168.64.13, ttl 14s        192.168.64.13   vm3-backend-a   A
+12:12:12  192.168.64.13, ttl 9s         192.168.64.13   vm3-backend-a   B
+12:12:17  192.168.64.13, ttl 4s         192.168.64.13   vm3-backend-a   A
+12:12:22  192.168.64.13, ttl 30s        192.168.64.13   vm3-backend-a   B
+vks@vm4-backend-b:~$
+
+## vm1-dns
+vks@vm1-dns:~$ # CUTOVER: point the names at the standby edge (vm3, .13) on BOTH DNS servers
+vks@vm1-dns:~$ sudo sed -i "s/,192.168.64.12,30/,192.168.64.13,30/" /etc/dnsmasq.d/teamvks-records.conf && sudo syst
+emctl restart dnsmasq && grep ^host-record /etc/dnsmasq.d/teamvks-records.conf
+host-record=app.teamvks.test,192.168.64.13,30
+host-record=api.teamvks.test,192.168.64.13,30
+vks@vm1-dns:~$ # a client with no cache sees the new record at once
+vks@vm1-dns:~$ dig +noall +answer app.teamvks.test; curl -si https://app.teamvks.test/api/status | tr -d "\r" | grep
+ -iE "^HTTP|x-edge|x-backend" | paste -sd" "
+app.teamvks.test.	30	IN	A	192.168.64.13
+HTTP/2 200  x-backend: A x-edge: vm3-backend-a
+vks@vm1-dns:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ N=$(sudo wc -l < /var/log/nginx/teamvks-access.log); echo "access log: $N lines before the cuto
+ver"
+access log: 4 lines before the cutover
+vks@vm3-backend-a:~$ sudo sed -i "s/,192.168.64.12,30/,192.168.64.13,30/" /etc/dnsmasq.d/teamvks-records.conf && sud
+o systemctl restart dnsmasq && grep ^host-record /etc/dnsmasq.d/teamvks-records.conf
+host-record=app.teamvks.test,192.168.64.13,30
+host-record=api.teamvks.test,192.168.64.13,30
+vks@vm3-backend-a:~$

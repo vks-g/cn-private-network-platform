@@ -1,0 +1,37 @@
+# 14 · Extension B: cutback to vm2: the DNS server already answers .12 but vm4's cache still returns .13 (TTL 27 s left); resolvectl flush-caches switches it at once
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ # vm4 has the standby edge (.13) in its cache
+vks@vm4-backend-b:~$ dig @127.0.0.53 +noall +answer app.teamvks.test
+app.teamvks.test.	30	IN	A	192.168.64.13
+vks@vm4-backend-b:~$ # the server already answers .12, but the cache still says .13 until its TTL runs out
+vks@vm4-backend-b:~$ dig @192.168.64.11 +noall +answer app.teamvks.test; dig @127.0.0.53 +noall +answer app.teamvks
+.test
+app.teamvks.test.	30	IN	A	192.168.64.12
+app.teamvks.test.	27	IN	A	192.168.64.13
+vks@vm4-backend-b:~$ # do not wait: flush the client cache
+vks@vm4-backend-b:~$ sudo resolvectl flush-caches; dig @127.0.0.53 +noall +answer app.teamvks.test; curl -si https:
+//app.teamvks.test/api/status | tr -d "\r" | grep -iE "^HTTP|x-edge|x-backend" | paste -sd" "
+app.teamvks.test.	30	IN	A	192.168.64.12
+HTTP/2 200  x-backend: A x-edge: vm2-edge
+vks@vm4-backend-b:~$ # demo over: back to the Phase 1 resolver setup (no client cache)
+vks@vm4-backend-b:~$ sudo ln -sf ../run/systemd/resolve/resolv.conf /etc/resolv.conf && grep ^nameserver /etc/resol
+v.conf
+nameserver 192.168.64.11
+nameserver 192.168.64.13
+vks@vm4-backend-b:~$
+
+## vm1-dns
+vks@vm1-dns:~$ # CUTBACK: names back to the main edge vm2 (.12)
+vks@vm1-dns:~$ sudo sed -i "s/,192.168.64.13,30/,192.168.64.12,30/" /etc/dnsmasq.d/teamvks-records.conf && sudo syst
+emctl restart dnsmasq && diff /etc/dnsmasq.d/teamvks-records.conf ~/cn/configs/common/dnsmasq/teamvks-records.conf &
+& echo "records back to vm2 (same as the repo file)"
+records back to vm2 (same as the repo file)
+vks@vm1-dns:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo sed -i "s/,192.168.64.13,30/,192.168.64.12,30/" /etc/dnsmasq.d/teamvks-records.conf && sud
+o systemctl restart dnsmasq && diff /etc/dnsmasq.d/teamvks-records.conf ~/cn/configs/common/dnsmasq/teamvks-records.
+conf && echo "records back to vm2 (same as the repo file)"
+records back to vm2 (same as the repo file)
+vks@vm3-backend-a:~$
