@@ -1,0 +1,39 @@
+#!/usr/sbin/nft -f
+# Extension C: service isolation on vm4-backend-b (Backend B, port 3002).
+# Only the edge (vm2-edge, 192.168.64.12) may open TCP connections to port 3002.
+# Every other machine on the LAN, including the test clients, is silently dropped.
+#
+# The rules live in their own table, so they never touch SSH, DNS or anything else,
+# and rollback is just deleting this one table.
+#
+# 1. rollback copy:  sudo nft list ruleset | tee ~/nft-rollback.rules
+# 2. apply:          sudo nft -f ~/cn/configs/vm4-backend-b/nftables/teamvks-isolation.nft
+# 3. inspect:        sudo nft list table inet teamvks_isolation   (counters show the drops)
+# 4. rollback:       sudo nft delete table inet teamvks_isolation
+#                    sudo nft list ruleset | diff ~/nft-rollback.rules - && echo restored
+#
+# Loaded at runtime only (not in /etc/nftables.conf), so a reboot also restores
+# the original state.
+
+# Re-running the file starts from a clean table instead of adding duplicate rules.
+table inet teamvks_isolation
+delete table inet teamvks_isolation
+
+table inet teamvks_isolation {
+    chain input {
+        # Hook into incoming packets. "policy accept": anything not matched below
+        # (SSH, DNS, ping, ...) is left alone.
+        type filter hook input priority filter; policy accept;
+
+        # The machine itself may always reach its own backend.
+        iif "lo" tcp dport 3002 accept
+
+        # The edge (nginx on vm2) is the only LAN host allowed in.
+        ip saddr 192.168.64.12 tcp dport 3002 counter accept comment "edge -> backend B"
+
+        # Everyone else: drop. Drop (not reject) means no reply at all, so a client
+        # sees a timeout ("filtered"). A stopped service would answer with a TCP RST
+        # ("connection refused") instead: the two failures look different on purpose.
+        tcp dport 3002 counter drop comment "direct client -> backend B blocked"
+    }
+}
