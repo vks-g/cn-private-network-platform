@@ -1,0 +1,32 @@
+# 03 · Extension A: dnsmasq stopped on vm1 → vm4's query to .11 is refused (ICMP), resolved retries .13 and HTTPS still works; then vm1 restarted
+
+## vm1-dns
+vks@vm1-dns:~$ sudo systemctl stop dnsmasq; systemctl is-active dnsmasq; sudo ss -lunp | grep -c dnsmasq
+inactive
+0
+vks@vm1-dns:~$ sudo systemctl start dnsmasq; systemctl is-active dnsmasq; dig @192.168.64.11 +short app.teamvks.test
+active
+192.168.64.12
+vks@vm1-dns:~$
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ dig @192.168.64.11 app.teamvks.test +tries=1 +time=2 | grep -E "status|refused|reached"
+;; communications error to 192.168.64.11#53: connection refused
+;; no servers could be reached
+vks@vm4-backend-b:~$ sudo resolvectl flush-caches; (sudo timeout 6 tcpdump -lni enp0s1 -c 10 "port 53 or icmp" 2>/d
+ev/null & sleep 1; curl -si https://app.teamvks.test/api/status | grep -iE "^HTTP|x-backend"; wait)
+12:01:22.061587 IP 192.168.64.14.42804 > 192.168.64.11.53: 11412+ A? app.teamvks.test. (34)
+12:01:22.061615 IP 192.168.64.14.42804 > 192.168.64.11.53: 48528+ AAAA? app.teamvks.test. (34)
+12:01:22.062720 IP 192.168.64.11 > 192.168.64.14: ICMP 192.168.64.11 udp port 53 unreachable, length 70
+12:01:22.062720 IP 192.168.64.11 > 192.168.64.14: ICMP 192.168.64.11 udp port 53 unreachable, length 70
+12:01:22.062838 IP 192.168.64.14.57044 > 192.168.64.13.53: 11412+ A? app.teamvks.test. (34)
+12:01:22.062853 IP 192.168.64.14.57044 > 192.168.64.13.53: 48528+ AAAA? app.teamvks.test. (34)
+12:01:22.065057 IP 192.168.64.13.53 > 192.168.64.14.57044: 11412* 1/0/0 A 192.168.64.12 (50)
+12:01:22.065057 IP 192.168.64.13.53 > 192.168.64.14.57044: 48528 0/0/0 (34)
+HTTP/2 200
+x-backend: B
+
+vks@vm4-backend-b:~$ resolvectl status enp0s1 | grep -E "Current DNS|DNS Servers"
+Current DNS Server: 192.168.64.13
+       DNS Servers: 192.168.64.11 192.168.64.13
+vks@vm4-backend-b:~$

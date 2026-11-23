@@ -1,0 +1,65 @@
+# 01 · Extension A: backup dnsmasq on vm3 (.13) answers exactly like the primary on vm1 (.11), TTL 30
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo install -m 644 ~/cn/configs/vm3-backend-a/dnsmasq.d/teamvks.conf ~/cn/configs/common/dnsma
+sq/teamvks-records.conf /etc/dnsmasq.d/ && sudo dnsmasq --test && sudo systemctl restart dnsmasq && systemctl is-act
+ive dnsmasq
+dnsmasq: syntax check OK.
+active
+vks@vm3-backend-a:~$ grep -hvE '^\s*(#|$)' /etc/dnsmasq.d/teamvks*.conf
+interface=enp0s1
+listen-address=192.168.64.13
+bind-dynamic
+no-resolv
+server=192.168.64.1
+domain-needed
+bogus-priv
+log-queries
+local=/teamvks.test/
+host-record=app.teamvks.test,192.168.64.12,30
+host-record=api.teamvks.test,192.168.64.12,30
+vks@vm3-backend-a:~$ md5sum /etc/dnsmasq.d/teamvks-records.conf; sudo ss -lunp "sport = :53" | grep -v 127.0.0
+9b682f9c58b71c41674edf612d7d18c2  /etc/dnsmasq.d/teamvks-records.conf
+State  Recv-Q Send-Q                      Local Address:Port Peer Address:PortProcess
+
+UNCONN 0      0                           192.168.64.13:53        0.0.0.0:*    users:(("dnsmasq",pid=2305,fd=4))
+
+UNCONN 0      0                                   [::1]:53           [::]:*    users:(("dnsmasq",pid=2305,fd=10))
+
+UNCONN 0      0      [fe80::7814:d5ff:fe23:b070]%enp0s1:53           [::]:*    users:(("dnsmasq",pid=2305,fd=8))
+
+vks@vm3-backend-a:~$
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ for s in 192.168.64.11 192.168.64.13; do dig @$s app.teamvks.test +noall +answer +stats | grep
+ -E "IN|SERVER"; dig @$s api.teamvks.test +noall +answer | grep IN; echo; done
+app.teamvks.test.	30	IN	A	192.168.64.12
+;; SERVER: 192.168.64.11#53(192.168.64.11) (UDP)
+api.teamvks.test.	30	IN	A	192.168.64.12
+
+app.teamvks.test.	30	IN	A	192.168.64.12
+;; SERVER: 192.168.64.13#53(192.168.64.13) (UDP)
+api.teamvks.test.	30	IN	A	192.168.64.12
+
+vks@vm4-backend-b:~$
+
+## vm1-dns
+vks@vm1-dns:~$ sudo install -m 644 ~/cn/configs/vm1-dns/dnsmasq.d/teamvks.conf ~/cn/configs/common/dnsmasq/teamvks-r
+ecords.conf /etc/dnsmasq.d/ && sudo dnsmasq --test && sudo systemctl restart dnsmasq && systemctl is-active dnsmasq
+dnsmasq: syntax check OK.
+active
+vks@vm1-dns:~$ grep -hvE '^\s*(#|$)' /etc/dnsmasq.d/teamvks-records.conf
+local=/teamvks.test/
+host-record=app.teamvks.test,192.168.64.12,30
+host-record=api.teamvks.test,192.168.64.12,30
+vks@vm1-dns:~$ md5sum /etc/dnsmasq.d/teamvks-records.conf; sudo ss -lunp "sport = :53" | grep -v 127.0.0
+9b682f9c58b71c41674edf612d7d18c2  /etc/dnsmasq.d/teamvks-records.conf
+State  Recv-Q Send-Q                      Local Address:Port Peer Address:PortProcess
+
+UNCONN 0      0                           192.168.64.11:53        0.0.0.0:*    users:(("dnsmasq",pid=1352,fd=4))
+
+UNCONN 0      0                                   [::1]:53           [::]:*    users:(("dnsmasq",pid=1352,fd=10))
+
+UNCONN 0      0      [fe80::cc6c:90ff:fea5:665a]%enp0s1:53           [::]:*    users:(("dnsmasq",pid=1352,fd=8))
+
+vks@vm1-dns:~$

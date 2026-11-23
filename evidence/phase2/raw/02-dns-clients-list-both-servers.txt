@@ -1,0 +1,26 @@
+# 02 · Extension A: clients list the primary (.11) first and the backup (.13) second (vm4 via netplan, the Mac via /etc/resolver)
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ sudo install -m 600 ~/cn/configs/vm4-backend-b/netplan/60-static.yaml /etc/netplan/ && sudo gr
+ep "addresses: \[" /etc/netplan/60-static.yaml && sudo netplan apply && echo applied
+        addresses: [192.168.64.11, 192.168.64.13]
+applied
+vks@vm4-backend-b:~$ resolvectl status enp0s1 | grep -E "Link|Current DNS|DNS Servers"
+Link 2 (enp0s1)
+       DNS Servers: 192.168.64.11 192.168.64.13
+vks@vm4-backend-b:~$ resolvectl query app.teamvks.test | head -1; resolvectl status enp0s1 | grep -E "Current DNS|D
+NS Servers"
+app.teamvks.test: 192.168.64.12                             -- link: enp0s1
+Current DNS Server: 192.168.64.11
+       DNS Servers: 192.168.64.11 192.168.64.13
+vks@vm4-backend-b:~$
+
+## macOS host
+mac:~$ grep -v "^#" /etc/resolver/teamvks.test; scutil --dns | grep -B1 -A4 "domain   : teamvks.test" | grep -E "dom
+ain|nameserver"
+nameserver 192.168.64.11
+nameserver 192.168.64.13
+  domain   : teamvks.test
+  nameserver[0] : 192.168.64.11
+  nameserver[1] : 192.168.64.13
+mac:~$
