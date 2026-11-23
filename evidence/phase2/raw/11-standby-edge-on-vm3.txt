@@ -1,0 +1,70 @@
+# 11 · Extension E: standby edge on vm3: key + CSR made on vm3, signed by our CA on the Mac, same nginx file; verified TLS and X-Edge: vm3-backend-a while DNS still points at vm2
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ # 1. vm3: its own key + signing request (the key never leaves vm3)
+vks@vm3-backend-a:~$ (umask 077; openssl req -new -newkey rsa:2048 -nodes -keyout teamvks-standby.key -out teamvks-s
+tandby.csr -subj "/CN=app.teamvks.test/O=teamvks CN Project" 2>/dev/null) && ls -l teamvks-standby.*
+-rw------- 1 vks vks  940 Nov 23 12:09 teamvks-standby.csr
+-rw------- 1 vks vks 1704 Nov 23 12:09 teamvks-standby.key
+vks@vm3-backend-a:~$ # 3. vm3: install cert + key at the same paths as vm2, same nginx site file
+vks@vm3-backend-a:~$ sudo install -d /etc/nginx/tls && sudo install -m 600 teamvks-standby.key /etc/nginx/tls/teamvk
+s-server.key && sudo install -m 644 teamvks-standby.crt /etc/nginx/tls/teamvks-server.crt && rm teamvks-standby.key
+teamvks-standby.csr && sudo ls -l /etc/nginx/tls
+total 8
+-rw-r--r-- 1 root root 1326 Nov 23 12:10 teamvks-server.crt
+-rw------- 1 root root 1704 Nov 23 12:10 teamvks-server.key
+vks@vm3-backend-a:~$ sudo install -m 644 ~/cn/configs/vm2-edge/nginx/teamvks.conf /etc/nginx/sites-available/teamvks
+ && sudo ln -sf /etc/nginx/sites-available/teamvks /etc/nginx/sites-enabled/ && sudo rm -f /etc/nginx/sites-enabled/
+default && sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+vks@vm3-backend-a:~$ sudo systemctl enable --now nginx 2>/dev/null; systemctl is-active nginx; sudo ss -ltnp | grep
+-E ":(80|443) " | awk "{print \$4}"
+active
+0.0.0.0:443
+0.0.0.0:80
+vks@vm3-backend-a:~$
+
+## macOS host
+mac:~$ cd ~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls
+mac:~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls$ # 2. Mac (CA): fetch the CSR, sign it with the sa
+me server.ext, send the certificate back
+mac:~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls$ scp -q vm3:teamvks-standby.csr private/ && openss
+l req -in private/teamvks-standby.csr -noout -subject
+subject=CN=app.teamvks.test, O=teamvks CN Project
+mac:~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls$ openssl x509 -req -in private/teamvks-standby.csr
+ -CA teamvks-ca.crt -CAkey private/teamvks-ca.key -CAserial teamvks-ca.srl -days 397 -sha256 -extfile server.ext -ou
+t teamvks-standby.crt
+Certificate request self-signature ok
+subject=CN=app.teamvks.test, O=teamvks CN Project
+mac:~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls$ openssl verify -CAfile teamvks-ca.crt teamvks-sta
+ndby.crt && openssl x509 -in teamvks-standby.crt -noout -subject -enddate -ext subjectAltName
+teamvks-standby.crt: OK
+subject=CN=app.teamvks.test, O=teamvks CN Project
+notAfter=Dec 25 12:09:51 2027 GMT
+X509v3 Subject Alternative Name:
+    DNS:app.teamvks.test, DNS:api.teamvks.test
+mac:~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls$ scp -q teamvks-standby.crt vm3: && echo "sent to
+vm3"
+sent to vm3
+mac:~/Documents/Sem_5_Projects/CN/cn-private-network-platform/tls$
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ # 4. vm4: DNS still sends clients to vm2; test the standby directly with --resolve (no -k)
+vks@vm4-backend-b:~$ dig +short app.teamvks.test
+192.168.64.12
+vks@vm4-backend-b:~$ openssl s_client -connect 192.168.64.13:443 -servername app.teamvks.test -verify_hostname app.
+teamvks.test </dev/null 2>/dev/null | grep -E "^subject=|^issuer=|Verify return"
+subject=CN = app.teamvks.test, O = teamvks CN Project
+issuer=CN = teamvks Lab Root CA, O = teamvks CN Project
+Verify return code: 0 (ok)
+vks@vm4-backend-b:~$ for i in 1 2 3 4; do curl -si --resolve app.teamvks.test:443:192.168.64.13 https://app.teamvks
+.test/api/status | tr -d "\r" | grep -iE "^HTTP|x-edge|x-backend" | paste -sd" "; done
+HTTP/2 200  x-backend: A x-edge: vm3-backend-a
+HTTP/2 200  x-backend: B x-edge: vm3-backend-a
+HTTP/2 200  x-backend: A x-edge: vm3-backend-a
+HTTP/2 200  x-backend: B x-edge: vm3-backend-a
+vks@vm4-backend-b:~$ curl -si https://app.teamvks.test/api/status | tr -d "\r" | grep -iE "^HTTP|x-edge|x-backend"
+| paste -sd" "
+HTTP/2 200  x-backend: B x-edge: vm2-edge
+vks@vm4-backend-b:~$

@@ -3,8 +3,15 @@
 #
 # Every INTERVAL seconds, one line:
 #   TIME | the answer and its remaining TTL in THIS machine's DNS cache
-#          (systemd-resolved at 127.0.0.53, the same cache curl and browsers use)
+#          (systemd-resolved at 127.0.0.53)
 #        | the IP curl actually connected to | which edge and which backend answered.
+#
+# curl only uses that cache when /etc/resolv.conf points at the stub 127.0.0.53
+# (Ubuntu's default). Our VMs were switched to query 192.168.64.11 directly in
+# Phase 1 (no client cache), so for this demo switch the client to the stub first:
+#   sudo ln -sf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+# and back afterwards:
+#   sudo ln -sf ../run/systemd/resolve/resolv.conf /etc/resolv.conf
 #
 # While the cached answer is still valid the client keeps going to the old edge,
 # even though the DNS server already has the new record. When the TTL runs out,
