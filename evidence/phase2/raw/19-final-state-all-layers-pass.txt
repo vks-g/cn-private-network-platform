@@ -1,0 +1,49 @@
+# 19 · Final state: diagnose.sh passes all four layers from vm4 (app) and vm1 (api), A/B alternate via vm2; live configs match the repo; vm3 runs Backend A, backup DNS and the standby edge; no firewall table left
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test | grep --color=never -E "PASS|FAIL|WARN|==>"
+  PASS  server 192.168.64.11: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  server 192.168.64.13: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  system resolver on vm4-backend-b (getent, what curl uses) -> 192.168.64.12
+  PASS  three-way handshake completed in 3 ms
+  PASS  TLSv1.3 handshake, certificate verified for app.teamvks.test (signed by a trusted CA, name matches, in date
+)
+  PASS  200 OK   x-edge: vm2-edge   x-backend: B
+==> All four layers OK: DNS -> TCP -> TLS -> HTTP
+vks@vm4-backend-b:~$ for i in $(seq 6); do curl -si https://app.teamvks.test/api/status | tr -d "\r" | grep -iE "^H
+TTP|x-edge|x-backend" | paste -sd" "; done
+HTTP/2 200  x-backend: A x-edge: vm2-edge
+HTTP/2 200  x-backend: B x-edge: vm2-edge
+HTTP/2 200  x-backend: A x-edge: vm2-edge
+HTTP/2 200  x-backend: B x-edge: vm2-edge
+HTTP/2 200  x-backend: A x-edge: vm2-edge
+HTTP/2 200  x-backend: B x-edge: vm2-edge
+vks@vm4-backend-b:~$
+
+## vm1-dns
+vks@vm1-dns:~$ bash ~/cn/scripts/diagnose.sh api.teamvks.test | grep --color=never -E "PASS|FAIL|WARN|==>"
+  PASS  server 192.168.64.11: api.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  server 192.168.64.13: api.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  system resolver on vm1-dns (getent, what curl uses) -> 192.168.64.12
+  PASS  three-way handshake completed in 2 ms
+  PASS  TLSv1.3 handshake, certificate verified for api.teamvks.test (signed by a trusted CA, name matches, in date)
+  PASS  200 OK   x-edge: vm2-edge   x-backend: A
+==> All four layers OK: DNS -> TCP -> TLS -> HTTP
+vks@vm1-dns:~$
+
+## vm2-edge
+vks@vm2-edge:~$ # edge: live config == repo, nginx up
+vks@vm2-edge:~$ diff ~/cn/configs/vm2-edge/nginx/teamvks.conf /etc/nginx/sites-available/teamvks && echo "site file
+ == repo"; systemctl is-active nginx
+site file == repo
+active
+vks@vm2-edge:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ # vm3: Backend A + backup DNS + standby edge (not in DNS); no firewall table left
+vks@vm3-backend-a:~$ systemctl is-active teamvks-backend dnsmasq nginx | paste -sd" "; sudo nft list tables | wc -l;
+ diff ~/cn/configs/common/dnsmasq/teamvks-records.conf /etc/dnsmasq.d/teamvks-records.conf && echo "records == repo"
+active active active
+0
+records == repo
+vks@vm3-backend-a:~$

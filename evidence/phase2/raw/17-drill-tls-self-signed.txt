@@ -1,0 +1,48 @@
+# 17 · Extension F drill 3 (TLS): edge serving a self-signed certificate → DNS and TCP pass, the certificate check fails (self-signed, no SAN); diff finds the changed ssl_certificate lines
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test; echo "exit=$?"
+Diagnosing https://app.teamvks.test:443/api/status from vm4-backend-b
+
+[1] DNS (UDP/53): name -> IP
+  PASS  server 192.168.64.11: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  server 192.168.64.13: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  system resolver on vm4-backend-b (getent, what curl uses) -> 192.168.64.12
+
+[2] TCP: connect to 192.168.64.12:443
+  PASS  three-way handshake completed in 2 ms
+
+[3] TLS: handshake + certificate check for app.teamvks.test
+        subject=CN = app.teamvks.test   issuer=CN = app.teamvks.test
+        SAN: none   expires: Nov 24 12:16:08 2026 GMT
+  FAIL  TLSv1.3 handshake, but certificate check failed: self-signed certificate
+
+==> Broken layer: TLS
+    - 'self-signed' / 'unable to get local issuer' -> nginx serves a certificate our CA did not sign (ssl_certifica
+te path in the nginx config), or our CA is not trusted on this client
+    - 'hostname mismatch' -> the certificate's SAN does not contain app.teamvks.test
+    - 'certificate has expired' / 'not yet valid' -> dates (or a clock problem)
+exit=3
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test | tail -1
+==> All four layers OK: DNS -> TCP -> TLS -> HTTP
+vks@vm4-backend-b:~$
+
+## vm2-edge
+vks@vm2-edge:~$ # FAULT: nginx switched to a throwaway self-signed certificate
+vks@vm2-edge:~$ sudo openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=app.teamvks.test" -keyout /etc/ng
+inx/tls/drill.key -out /etc/nginx/tls/drill.crt 2>/dev/null && sudo sed -i "s#tls/teamvks-server\.#tls/drill.#" /et
+c/nginx/sites-available/teamvks && sudo nginx -t 2>&1 | tail -1 && sudo systemctl reload nginx
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+vks@vm2-edge:~$ # FIND: compare the live site file with the repo copy
+vks@vm2-edge:~$ diff ~/cn/configs/vm2-edge/nginx/teamvks.conf /etc/nginx/sites-available/teamvks
+61,62c61,62
+<     ssl_certificate     /etc/nginx/tls/teamvks-server.crt;
+<     ssl_certificate_key /etc/nginx/tls/teamvks-server.key;
+---
+>     ssl_certificate     /etc/nginx/tls/drill.crt;
+>     ssl_certificate_key /etc/nginx/tls/drill.key;
+vks@vm2-edge:~$ # FIX: reinstall the site file, remove the throwaway cert
+vks@vm2-edge:~$ sudo install -m 644 ~/cn/configs/vm2-edge/nginx/teamvks.conf /etc/nginx/sites-available/teamvks &&
+sudo nginx -t 2>&1 | tail -1 && sudo systemctl reload nginx && sudo rm /etc/nginx/tls/drill.*
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+vks@vm2-edge:~$

@@ -1,0 +1,52 @@
+# 18 · Extension F drill 4 (HTTP): upstream ports mistyped → DNS, TCP and TLS pass, the edge returns 502; error.log names the wrong ports 3011/3012; reinstalling the site file fixes it
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test; echo "exit=$?"
+Diagnosing https://app.teamvks.test:443/api/status from vm4-backend-b
+
+[1] DNS (UDP/53): name -> IP
+  PASS  server 192.168.64.11: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  server 192.168.64.13: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  system resolver on vm4-backend-b (getent, what curl uses) -> 192.168.64.12
+
+[2] TCP: connect to 192.168.64.12:443
+  PASS  three-way handshake completed in 2 ms
+
+[3] TLS: handshake + certificate check for app.teamvks.test
+        subject=CN = app.teamvks.test, O = teamvks CN Project   issuer=CN = teamvks Lab Root CA, O = teamvks CN Pro
+ject
+        SAN: DNS:app.teamvks.test, DNS:api.teamvks.test   expires: Nov  4 19:44:50 2027 GMT
+  PASS  TLSv1.3 handshake, certificate verified for app.teamvks.test (signed by a trusted CA, name matches, in date
+)
+
+[4] HTTP: GET https://app.teamvks.test:443/api/status
+  FAIL  502 Bad Gateway from edge vm2-edge
+
+==> Broken layer: HTTP (edge -> backend)
+    - the edge works but no backend answered: both backends stopped, or a wrong IP/port in the nginx upstream block
+    - look at the edge: sudo tail /var/log/nginx/error.log (connect() failed ... upstream: ...)
+exit=4
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test | tail -1
+==> All four layers OK: DNS -> TCP -> TLS -> HTTP
+vks@vm4-backend-b:~$
+
+## vm2-edge
+vks@vm2-edge:~$ # FAULT: upstream ports mistyped (3001 -> 3011, 3002 -> 3012)
+vks@vm2-edge:~$ sudo sed -i -E "s/(server 192\.168\.64\.1[34]):300([12])/\1:301\2/" /etc/nginx/sites-available/team
+vks && sudo nginx -t 2>&1 | tail -1 && sudo systemctl reload nginx
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+vks@vm2-edge:~$ # FIND: TLS works, so the edge is fine; why can it not reach a backend?
+vks@vm2-edge:~$ sudo tail -n2 /var/log/nginx/error.log | sed -E 's/^(\S+ \S+).*(connect\(\) failed[^,]*).*(upstream
+: "[^"]*").*/\1 \2 \3/'
+2026/11/23 12:16:35 connect() failed (111: Connection refused) while connecting to upstream upstream: "http://192.1
+68.64.13:3011/api/status"
+2026/11/23 12:16:35 connect() failed (111: Connection refused) while connecting to upstream upstream: "http://192.1
+68.64.14:3012/api/status"
+vks@vm2-edge:~$ grep -n "server 192" /etc/nginx/sites-available/teamvks
+37:    server 192.168.64.13:3011 max_fails=1 fail_timeout=10s;   # Backend A (vm3)
+38:    server 192.168.64.14:3012 max_fails=1 fail_timeout=10s;   # Backend B (vm4)
+vks@vm2-edge:~$ # FIX: reinstall the site file
+vks@vm2-edge:~$ sudo install -m 644 ~/cn/configs/vm2-edge/nginx/teamvks.conf /etc/nginx/sites-available/teamvks &&
+sudo nginx -t 2>&1 | tail -1 && sudo systemctl reload nginx
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+vks@vm2-edge:~$
