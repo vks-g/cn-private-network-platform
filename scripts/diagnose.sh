@@ -82,7 +82,8 @@ if [[ -z $proto || -z $cert ]]; then
     stop "TLS" "something answers on port $PORT but does not speak TLS: missing 'ssl' on the listen line, or the wrong service on this port"
 fi
 info "$(openssl x509 -noout -subject <<<"$cert")   $(openssl x509 -noout -issuer <<<"$cert")"
-info "$(openssl x509 -noout -ext subjectAltName <<<"$cert" | tail -1 | sed 's/^ *//')   expires: $(openssl x509 -noout -enddate <<<"$cert" | cut -d= -f2)"
+san=$(openssl x509 -noout -ext subjectAltName <<<"$cert" 2>/dev/null | grep -o 'DNS:.*')
+info "SAN: ${san:-none}   expires: $(openssl x509 -noout -enddate <<<"$cert" | cut -d= -f2)"
 if [[ ${code%% *} == 0 ]]; then
     ok "$proto handshake, certificate verified for $NAME (signed by a trusted CA, name matches, in date)"
 else

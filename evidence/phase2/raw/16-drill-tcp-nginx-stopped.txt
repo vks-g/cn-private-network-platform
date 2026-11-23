@@ -1,0 +1,35 @@
+# 16 · Extension F drill 2 (TCP): nginx stopped on the edge → DNS passes, TCP 443 is refused while the host answers ping; nothing listens on 443; nginx -t + start fixes it
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test; echo "exit=$?"
+Diagnosing https://app.teamvks.test:443/api/status from vm4-backend-b
+
+[1] DNS (UDP/53): name -> IP
+  PASS  server 192.168.64.11: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  server 192.168.64.13: app.teamvks.test -> 192.168.64.12 (ttl 30)
+  PASS  system resolver on vm4-backend-b (getent, what curl uses) -> 192.168.64.12
+
+[2] TCP: connect to 192.168.64.12:443
+  FAIL  connection refused (TCP RST); host 192.168.64.12 answers ping (IP layer fine)
+
+==> Broken layer: TCP
+    - the edge is up but nothing listens on port 443: nginx stopped (systemctl status nginx)
+    - or nginx listens on another port (ss -ltnp on the edge, 'listen' lines in the nginx config)
+exit=2
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test | tail -1
+==> All four layers OK: DNS -> TCP -> TLS -> HTTP
+vks@vm4-backend-b:~$
+
+## vm2-edge
+vks@vm2-edge:~$ # FAULT: the edge web server is stopped
+vks@vm2-edge:~$ sudo systemctl stop nginx
+vks@vm2-edge:~$ # FIND: is anything listening on 443?
+vks@vm2-edge:~$ sudo ss -ltn "sport = :443" | tail -n +2 | wc -l; systemctl is-active nginx
+0
+inactive
+vks@vm2-edge:~$ # FIX
+vks@vm2-edge:~$ sudo nginx -t 2>&1 | tail -1 && sudo systemctl start nginx && sudo ss -ltnp "sport = :443" | grep -
+o "nginx" | head -1
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+nginx
+vks@vm2-edge:~$

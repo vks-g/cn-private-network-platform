@@ -1,0 +1,45 @@
+# 15 · Extension F drill 1 (DNS): record name typo on both servers → diagnose.sh stops at layer 1 with NXDOMAIN; diff against the repo finds it, reinstall fixes it
+
+## vm4-backend-b
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test; echo "exit=$?"
+Diagnosing https://app.teamvks.test:443/api/status from vm4-backend-b
+
+[1] DNS (UDP/53): name -> IP
+  WARN  server 192.168.64.11: NXDOMAIN, no A record
+  WARN  server 192.168.64.13: NXDOMAIN, no A record
+  FAIL  this machine's resolver returns no address for app.teamvks.test
+
+==> Broken layer: DNS
+    - every server above says NXDOMAIN -> the record is missing or misspelt (host-record in /etc/dnsmasq.d/teamvks-
+records.conf)
+    - every server above has no reply -> dnsmasq stopped on vm1 and vm3 (systemctl status dnsmasq)
+    - servers answer but this machine doesn't -> wrong resolver config here (resolvectl status, netplan nameservers
+)
+exit=1
+vks@vm4-backend-b:~$ bash ~/cn/scripts/diagnose.sh app.teamvks.test | tail -1
+==> All four layers OK: DNS -> TCP -> TLS -> HTTP
+vks@vm4-backend-b:~$
+
+## vm1-dns
+vks@vm1-dns:~$ # FAULT: typo in the record name (teamvks -> teamvsk) on both DNS servers
+vks@vm1-dns:~$ sudo sed -i "s/^host-record=app.teamvks.test/host-record=app.teamvsk.test/" /etc/dnsmasq.d/teamvks-re
+cords.conf && sudo systemctl restart dnsmasq
+vks@vm1-dns:~$ # FIND: compare the live records with the repo copy
+vks@vm1-dns:~$ diff ~/cn/configs/common/dnsmasq/teamvks-records.conf /etc/dnsmasq.d/teamvks-records.conf
+17c17
+< host-record=app.teamvks.test,192.168.64.12,30
+---
+> host-record=app.teamvsk.test,192.168.64.12,30
+vks@vm1-dns:~$ # FIX: reinstall the records file on both servers
+vks@vm1-dns:~$ sudo install -m 644 ~/cn/configs/common/dnsmasq/teamvks-records.conf /etc/dnsmasq.d/ && sudo systemct
+l restart dnsmasq && dig @localhost +short app.teamvks.test
+192.168.64.12
+vks@vm1-dns:~$
+
+## vm3-backend-a
+vks@vm3-backend-a:~$ sudo sed -i "s/^host-record=app.teamvks.test/host-record=app.teamvsk.test/" /etc/dnsmasq.d/team
+vks-records.conf && sudo systemctl restart dnsmasq
+vks@vm3-backend-a:~$ sudo install -m 644 ~/cn/configs/common/dnsmasq/teamvks-records.conf /etc/dnsmasq.d/ && sudo sy
+stemctl restart dnsmasq && dig @localhost +short app.teamvks.test
+192.168.64.12
+vks@vm3-backend-a:~$
